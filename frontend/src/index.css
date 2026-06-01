@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* ── Reset ── */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f1f5f9;
+  color: #0f172a;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
+
+/* ── Gradient text ── */
+.gradient-text {
+  background: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Glass card ── */
+.card-glass {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(203,213,225,0.7);
+}
+
+/* ── Hero grid (landing only) ── */
+.hero-grid-dark {
+  background-image:
+    linear-gradient(rgba(124, 58, 237, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 58, 237, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Animations ── */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.3); }
+  50%       { box-shadow: 0 0 50px rgba(124, 58, 237, 0.6); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+
+.glow-pulse { animation: glow-pulse 2.5s ease-in-out infinite; }
+.float      { animation: float 4s ease-in-out infinite; }
+.fade-in-up { animation: fadeInUp 0.5s ease forwards; }
+
+.shimmer {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ── Status colors ── */
+.status-accepted    { color: #059669; }
+.status-wrong       { color: #dc2626; }
+.status-time        { color: #d97706; }
+.status-pending     { color: #64748b; }
+.status-running     { color: #0891b2; }
+.status-error       { color: #ea580c; }
+
+.diff-easy    { color: #059669; }
+.diff-medium  { color: #d97706; }
+.diff-hard    { color: #ea580c; }
+.diff-expert  { color: #dc2626; }

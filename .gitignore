@@ -1,0 +1,8 @@
+.venv
+__pycache__
+database.db
+CLAUDE.md
+requirements.txt
+.claude
+.env
+sqllite3
