@@ -7,6 +7,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitializing: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
@@ -19,6 +20,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isInitializing: false,
 
       login: async (email, password) => {
         set({ isLoading: true });
@@ -49,10 +51,14 @@ export const useAuthStore = create<AuthState>()(
         try {
           const user = await usersApi.me();
           set({ user, isAuthenticated: true });
-        } catch {
-          set({ isAuthenticated: false, user: null });
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+        } catch (error: unknown) {
+          const status = (error as { response?: { status?: number } })?.response?.status;
+          if (status === 401 || status === 403) {
+            set({ isAuthenticated: false, user: null });
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+          }
+          // Сетевые ошибки (бэкенд недоступен) — не разлогиниваем
         }
       },
 

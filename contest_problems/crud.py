@@ -3,13 +3,22 @@ from .models import ContestProblem
 from .schemas import ContestProblemCreate, ContestProblemUpdate
 import uuid
 
-def get_problems_by_contest(db: Session, contest_id: uuid.UUID):
+
+def _to_uuid(val) -> uuid.UUID:
+    if isinstance(val, uuid.UUID):
+        return val
+    return uuid.UUID(str(val))
+
+
+def get_problems_by_contest(db: Session, contest_id):
     return db.query(ContestProblem).filter(
-        ContestProblem.contest_id == contest_id
+        ContestProblem.contest_id == _to_uuid(contest_id)
     ).order_by(ContestProblem.order_num).all()
 
-def get_contest_problem_by_id(db: Session, cp_id: uuid.UUID):
-    return db.query(ContestProblem).filter(ContestProblem.id == cp_id).first()
+
+def get_contest_problem_by_id(db: Session, cp_id):
+    return db.query(ContestProblem).filter(ContestProblem.id == _to_uuid(cp_id)).first()
+
 
 def add_problem_to_contest(db: Session, data: ContestProblemCreate):
     db_cp = ContestProblem(**data.model_dump())
@@ -18,7 +27,8 @@ def add_problem_to_contest(db: Session, data: ContestProblemCreate):
     db.refresh(db_cp)
     return db_cp
 
-def update_contest_problem(db: Session, cp_id: uuid.UUID, data: ContestProblemUpdate):
+
+def update_contest_problem(db: Session, cp_id, data: ContestProblemUpdate):
     db_cp = get_contest_problem_by_id(db, cp_id)
     if not db_cp:
         return None
@@ -28,7 +38,8 @@ def update_contest_problem(db: Session, cp_id: uuid.UUID, data: ContestProblemUp
     db.refresh(db_cp)
     return db_cp
 
-def remove_problem_from_contest(db: Session, cp_id: uuid.UUID):
+
+def remove_problem_from_contest(db: Session, cp_id):
     db_cp = get_contest_problem_by_id(db, cp_id)
     if db_cp:
         db.delete(db_cp)

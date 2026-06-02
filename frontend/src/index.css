@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
-/* ── Reset ── */
+/* ── Включаем dark: по классу .dark на <html> ── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── Светлая тема ── */
+:root {
+  --bg:           #f1f5f9;
+  --surface:      #ffffff;
+  --surface-2:    #f8fafc;
+  --border:       #e2e8f0;
+  --border-2:     #cbd5e1;
+  --text-1:       #0f172a;
+  --text-2:       #475569;
+  --text-3:       #94a3b8;
+  --hover:        #f1f5f9;
+  --hover-2:      #e2e8f0;
+  --accent:       #7c3aed;
+  --accent-light: #ede9fe;
+  --accent-text:  #6d28d9;
+  --input-bg:     #ffffff;
+  --nav-bg:       #ffffff;
+  --nav-border:   #e2e8f0;
+  --shadow:       0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:    0 4px 8px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* ── Тёмная тема ── */
+.dark {
+  --bg:           #080814;
+  --surface:      #111128;
+  --surface-2:    #0d0d1f;
+  --border:       #1e1e3f;
+  --border-2:     #2d2d5e;
+  --text-1:       #f1f5f9;
+  --text-2:       #94a3b8;
+  --text-3:       #475569;
+  --hover:        rgba(255,255,255,0.05);
+  --hover-2:      rgba(255,255,255,0.08);
+  --accent:       #7c3aed;
+  --accent-light: rgba(124,58,237,0.18);
+  --accent-text:  #a78bfa;
+  --input-bg:     #111128;
+  --nav-bg:       #0d0d1f;
+  --nav-border:   #1e1e3f;
+  --shadow:       0 1px 4px rgba(0,0,0,0.5);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.6);
+}
+
+/* ── Семантические CSS-классы ── */
+.bg-app       { background-color: var(--bg); }
+.bg-surface   { background-color: var(--surface); }
+.bg-surface-2 { background-color: var(--surface-2); }
+.border-app   { border-color: var(--border); }
+.border-app-2 { border-color: var(--border-2); }
+.text-app-1   { color: var(--text-1); }
+.text-app-2   { color: var(--text-2); }
+.text-app-3   { color: var(--text-3); }
+.shadow-app   { box-shadow: var(--shadow); }
+.shadow-app-md{ box-shadow: var(--shadow-md); }
+
+/* ── Base ── */
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #f1f5f9;
-  color: #0f172a;
-  margin: 0;
-  padding: 0;
+  background-color: var(--bg);
+  color: var(--text-1);
+  margin: 0; padding: 0;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 #root { min-height: 100vh; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #f1f5f9; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
 /* ── Gradient text ── */
 .gradient-text {
@@ -30,58 +89,71 @@ body {
   background-clip: text;
 }
 
-/* ── Glass card ── */
-.card-glass {
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(203,213,225,0.7);
+/* ── Hero grid для лендинга ── */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(124,58,237,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
 }
 
-/* ── Hero grid (landing only) ── */
-.hero-grid-dark {
-  background-image:
-    linear-gradient(rgba(124, 58, 237, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.06) 1px, transparent 1px);
-  background-size: 40px 40px;
+/* ── Themed components ── */
+.card-theme {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.25s;
+}
+
+.input-theme {
+  background-color: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  transition: border-color 0.15s, background-color 0.25s;
+}
+.input-theme::placeholder { color: var(--text-3); }
+.input-theme:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+}
+
+.nav-theme {
+  background-color: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
+  box-shadow: var(--shadow);
+  transition: background-color 0.25s, border-color 0.25s;
+}
+
+.surface-transition {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
 }
 
 /* ── Animations ── */
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.3); }
-  50%       { box-shadow: 0 0 50px rgba(124, 58, 237, 0.6); }
+  0%,100% { box-shadow: 0 0 20px rgba(124,58,237,0.3); }
+  50%      { box-shadow: 0 0 50px rgba(124,58,237,0.6); }
 }
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-12px); }
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-12px); }
 }
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0);     }
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .glow-pulse { animation: glow-pulse 2.5s ease-in-out infinite; }
 .float      { animation: float 4s ease-in-out infinite; }
-.fade-in-up { animation: fadeInUp 0.5s ease forwards; }
+.fade-in-up { animation: fadeInUp 0.4s ease forwards; }
 
 .shimmer {
-  background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
-
-/* ── Status colors ── */
-.status-accepted    { color: #059669; }
-.status-wrong       { color: #dc2626; }
-.status-time        { color: #d97706; }
-.status-pending     { color: #64748b; }
-.status-running     { color: #0891b2; }
-.status-error       { color: #ea580c; }
-
-.diff-easy    { color: #059669; }
-.diff-medium  { color: #d97706; }
-.diff-hard    { color: #ea580c; }
-.diff-expert  { color: #dc2626; }

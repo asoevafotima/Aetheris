@@ -15,6 +15,15 @@ class ProblemStatus(str, Enum):
     published = "published"
     archived = "archived"
 
+class TagBrief(BaseModel):
+    id: UUID
+    name: str
+    slug: str
+    color: str
+
+    class Config:
+        from_attributes = True
+
 class ProblemCreate(BaseModel):
     title: str
     description: str
@@ -22,6 +31,7 @@ class ProblemCreate(BaseModel):
     output_format: str
     constraints: str
     difficulty: Difficulty
+    difficulty_code: Optional[str] = None
     time_limit_ms: int = 2000
     memory_limit_mb: int = 256
     is_public: bool = True
@@ -33,6 +43,7 @@ class ProblemUpdate(BaseModel):
     output_format: Optional[str] = None
     constraints: Optional[str] = None
     difficulty: Optional[Difficulty] = None
+    difficulty_code: Optional[str] = None
     status: Optional[ProblemStatus] = None
     time_limit_ms: Optional[int] = None
     memory_limit_mb: Optional[int] = None
@@ -47,6 +58,7 @@ class ProblemResponse(BaseModel):
     output_format: str
     constraints: str
     difficulty: Difficulty
+    difficulty_code: Optional[str] = None
     status: ProblemStatus
     time_limit_ms: int
     memory_limit_mb: int
@@ -56,6 +68,7 @@ class ProblemResponse(BaseModel):
     rating: float
     is_public: bool
     created_at: datetime
+    tags: List[TagBrief] = []
 
     class Config:
         from_attributes = True
@@ -65,8 +78,10 @@ class ProblemShortResponse(BaseModel):
     title: str
     slug: str
     difficulty: Difficulty
+    difficulty_code: Optional[str] = None
     solve_count: int
     rating: float
+    tags: List[TagBrief] = []
 
     class Config:
         from_attributes = True

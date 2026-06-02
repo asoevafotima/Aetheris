@@ -9,9 +9,9 @@ export function Card({ children, className = '', glow, hover, ...props }: CardPr
   return (
     <div
       className={`
-        rounded-xl border border-slate-200 bg-white shadow-sm
-        ${glow ? 'shadow-purple-200 shadow-md' : ''}
-        ${hover ? 'hover:border-purple-300 hover:shadow-md transition-all duration-200 cursor-pointer' : ''}
+        card-theme surface-transition
+        ${glow ? 'shadow-purple-200/60 dark:shadow-purple-900/30 shadow-md' : ''}
+        ${hover ? 'hover:border-[var(--border-2)] hover:shadow-app-md cursor-pointer' : ''}
         ${className}
       `}
       {...props}
@@ -23,7 +23,7 @@ export function Card({ children, className = '', glow, hover, ...props }: CardPr
 
 export function CardHeader({ children, className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`p-5 border-b border-slate-100 ${className}`} {...props}>
+    <div className={`p-5 border-b border-[var(--border)] ${className}`} {...props}>
       {children}
     </div>
   );

@@ -1,423 +1,404 @@
 """
-Seed script: promotes users to roles, creates problems, test cases, and contests.
-Run: python seed.py
+Seed script: создаёт задачи с difficulty_code и темами, 3 контеста.
+Запуск: python seed.py
 """
-import sqlite3, json, urllib.request, urllib.error
+import sys, os
+sys.path.insert(0, os.path.dirname(__file__))
+
+from database import SessionLocal, Base, engine
+
+import auth.models
+import users.models
+import user_profiles.models
+import user_settings.models
+import problems.models
+import problem_tags.models
+import problem_tag_map.models
+import test_cases.models
+import editorial.models
+import submissions.models
+import submission_results.models
+import contests.models
+import contest_problems.models
+import contest_participants.models
+import contest_standings.models
+import duels.models
+import duel_invitations.models
+import duel_ratings.models
+import teams.models
+import team_members.models
+import team_contests.models
+import achievements.models
+import user_achievements.models
+import ratings.models
+import notifications.models
+import chat_messages.models
+import follows.models
+import problem_bookmarks.models
+import user_weak_topics.models
+import ai_analysis.models
+import ai_hints.models
+import algorithm_visualizations.models
+import training_plans.models
+import training_plan_items.models
+import audit_logs.models
+
+Base.metadata.create_all(bind=engine)
+
 from datetime import datetime, timedelta
-
-DB = "database.db"
-BASE = "http://localhost:8000"
-
-# ─── helpers ────────────────────────────────────────────────────────────────
-
-def db_exec(sql, params=()):
-    conn = sqlite3.connect(DB)
-    cur = conn.cursor()
-    cur.execute(sql, params)
-    conn.commit()
-    conn.close()
-
-def db_fetchall(sql, params=()):
-    conn = sqlite3.connect(DB)
-    cur = conn.cursor()
-    cur.execute(sql, params)
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-def api(method, path, body=None, token=None):
-    data = json.dumps(body).encode() if body else None
-    headers = {"Content-Type": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(f"{BASE}{path}", data=data, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(req) as r:
-            return json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        msg = e.read().decode()
-        print(f"  ⚠  {method} {path} → {e.code}: {msg[:120]}")
-        return None
-
-# ─── 1. Promote users ────────────────────────────────────────────────────────
-
-print("\n=== 1. Roles ===")
-rows = db_fetchall("SELECT username, role FROM users")
-if not rows:
-    print("  No users found — register at least one user first!")
-else:
-    for username, role in rows:
-        print(f"  {username}: {role}")
-
-    # Promote first user to admin
-    first = rows[0][0]
-    db_exec("UPDATE users SET role='admin' WHERE username=?", (first,))
-    print(f"  ✓ {first} → admin")
-
-    # Promote second (if exists) to moderator
-    if len(rows) > 1:
-        second = rows[1][0]
-        db_exec("UPDATE users SET role='moderator' WHERE username=?", (second,))
-        print(f"  ✓ {second} → moderator")
-
-# ─── 2. Login as admin ───────────────────────────────────────────────────────
-
-print("\n=== 2. Login ===")
-rows2 = db_fetchall("SELECT email FROM users WHERE role='admin' LIMIT 1")
-if not rows2:
-    print("  No admin found, aborting.")
-    exit(1)
-
-admin_email = rows2[0][0]
-print(f"  Logging in as {admin_email} ...")
-
-# We don't know the password, so we reset it directly
+from slugify import slugify
 import bcrypt
-new_pass = "Admin1234!"
-new_hash = bcrypt.hashpw(new_pass.encode(), bcrypt.gensalt()).decode()
-db_exec("UPDATE users SET hashed_password=? WHERE email=?", (new_hash, admin_email))
-print(f"  ✓ Password reset to: {new_pass}")
 
-tok_data = api("POST", "/auth/login", {"email": admin_email, "password": new_pass})
-if not tok_data:
-    print("  Login failed")
-    exit(1)
-TOKEN = tok_data["access_token"]
-print(f"  ✓ Token: {TOKEN[:30]}...")
+from contests.models import Contest, ContestType, ContestStatus
+from contest_problems.models import ContestProblem
+from problems.models import Problem, Difficulty, ProblemStatus
+from problem_tags.models import ProblemTag
+from problem_tag_map.models import ProblemTagMap
+from test_cases.models import TestCase
+from users.models import User, UserRole
 
-# ─── 3. Problems ─────────────────────────────────────────────────────────────
+db = SessionLocal()
 
-PROBLEMS = [
+# ── 1. Удаляем все существующие контесты ──────────────────────────
+print("Удаляю существующие контесты...")
+db.query(ContestProblem).delete()
+db.query(Contest).delete()
+db.commit()
+print("  Готово.")
+
+# ── 2. Получаем или создаём admin-пользователя ────────────────────
+admin = db.query(User).filter(User.role == UserRole.admin).first()
+if not admin:
+    admin = db.query(User).first()
+if not admin:
+    admin = User(
+        username="admin",
+        email="admin@aetheris.io",
+        hashed_password=bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode(),
+        role=UserRole.admin,
+        is_active=True,
+        is_verified=True,
+    )
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+    print(f"  Создан admin: admin@aetheris.io / admin123")
+else:
+    admin.role = UserRole.admin
+    db.commit()
+
+admin_id = admin.id
+print(f"  Используем admin: {admin.username} ({admin.email})")
+
+# ── 3. Создаём/обновляем теги тем ─────────────────────────────────
+TAGS_DATA = [
+    {"name": "Массивы",                    "slug": "arrays",      "color": "#3b82f6"},
+    {"name": "Математика",                 "slug": "math",        "color": "#10b981"},
+    {"name": "Строки",                     "slug": "strings",     "color": "#f59e0b"},
+    {"name": "Сортировка",                 "slug": "sorting",     "color": "#eab308"},
+    {"name": "Графы",                      "slug": "graphs",      "color": "#8b5cf6"},
+    {"name": "Динамическое программирование", "slug": "dp",        "color": "#ef4444"},
+    {"name": "Ввод/Вывод",                 "slug": "io",          "color": "#6b7280"},
+    {"name": "Геометрия",                  "slug": "geometry",    "color": "#14b8a6"},
+    {"name": "Деревья",                    "slug": "trees",       "color": "#a16207"},
+    {"name": "Структуры данных",           "slug": "data-structures", "color": "#6366f1"},
+]
+
+print("\nСоздаю теги тем...")
+tags_by_slug = {}
+for tdata in TAGS_DATA:
+    existing = db.query(ProblemTag).filter(ProblemTag.slug == tdata["slug"]).first()
+    if existing:
+        existing.name = tdata["name"]
+        existing.color = tdata["color"]
+        tags_by_slug[tdata["slug"]] = existing
+        print(f"  = {tdata['name']} (обновлён)")
+    else:
+        tag = ProblemTag(**tdata)
+        db.add(tag)
+        db.flush()
+        tags_by_slug[tdata["slug"]] = tag
+        print(f"  + {tdata['name']}")
+db.commit()
+
+# ── 4. Создаём/обновляем 9 задач ──────────────────────────────────
+PROBLEMS_DATA = [
     {
-        "meta": {
-            "title": "Two Sum",
-            "description": (
-                "Given an array of integers `nums` and an integer `target`, "
-                "return indices of the two numbers such that they add up to `target`.\n\n"
-                "You may assume that each input would have exactly one solution, "
-                "and you may not use the same element twice."
-            ),
-            "input_format": "First line: integer n (size of array)\nSecond line: n integers\nThird line: integer target",
-            "output_format": "Two space-separated indices (0-indexed)",
-            "constraints": "2 ≤ n ≤ 10^4\n-10^9 ≤ nums[i] ≤ 10^9\n-10^9 ≤ target ≤ 10^9",
-            "difficulty": "easy",
-            "time_limit_ms": 1000,
-            "memory_limit_mb": 128,
-        },
-        "tests": [
-            {"input": "4\n2 7 11 15\n9",       "output": "0 1", "sample": True,  "score": 30},
-            {"input": "3\n3 2 4\n6",            "output": "1 2", "sample": True,  "score": 30},
-            {"input": "6\n1 3 5 7 9 11\n10",    "output": "1 4", "sample": False, "score": 40},
-        ],
+        "title": "Сумма двух чисел",
+        "difficulty_code": "A",
+        "topics": ["math", "io"],
+        "description": "Дано два целых числа A и B. Найдите их сумму.",
+        "input_format": "Два целых числа A и B на одной строке, разделённые пробелом.",
+        "output_format": "Одно целое число — сумма A и B.",
+        "constraints": "−10⁹ ≤ A, B ≤ 10⁹",
+        "difficulty": Difficulty.easy,
+        "time_limit_ms": 1000,
+        "memory_limit_mb": 256,
+        "samples": [("3 5", "8"), ("-1 1", "0")],
     },
     {
-        "meta": {
-            "title": "Fibonacci Number",
-            "description": (
-                "The Fibonacci numbers form a sequence: F(0) = 0, F(1) = 1, "
-                "F(n) = F(n-1) + F(n-2).\n\n"
-                "Given n, calculate F(n)."
-            ),
-            "input_format": "A single integer n",
-            "output_format": "A single integer — the n-th Fibonacci number",
-            "constraints": "0 ≤ n ≤ 30",
-            "difficulty": "easy",
-            "time_limit_ms": 500,
-            "memory_limit_mb": 64,
-        },
-        "tests": [
-            {"input": "0",  "output": "0",   "sample": True,  "score": 25},
-            {"input": "1",  "output": "1",   "sample": True,  "score": 25},
-            {"input": "10", "output": "55",  "sample": False, "score": 25},
-            {"input": "20", "output": "6765","sample": False, "score": 25},
-        ],
+        "title": "Максимум в массиве",
+        "difficulty_code": "A1",
+        "topics": ["arrays"],
+        "description": "Дан массив из N целых чисел. Найдите максимальный элемент.",
+        "input_format": "Первая строка содержит N. Вторая строка — N целых чисел.",
+        "output_format": "Одно целое число — максимальный элемент массива.",
+        "constraints": "1 ≤ N ≤ 10⁵, −10⁹ ≤ aᵢ ≤ 10⁹",
+        "difficulty": Difficulty.easy,
+        "time_limit_ms": 1000,
+        "memory_limit_mb": 256,
+        "samples": [("5\n3 1 4 1 5", "5"), ("3\n-1 -2 -3", "-1")],
     },
     {
-        "meta": {
-            "title": "Reverse a Linked List",
-            "description": (
-                "Given a sequence of n integers representing a linked list, "
-                "reverse it and print the result."
-            ),
-            "input_format": "First line: integer n\nSecond line: n integers",
-            "output_format": "n integers in reversed order, space-separated",
-            "constraints": "1 ≤ n ≤ 10^5\n-10^9 ≤ a[i] ≤ 10^9",
-            "difficulty": "easy",
-            "time_limit_ms": 1000,
-            "memory_limit_mb": 128,
-        },
-        "tests": [
-            {"input": "5\n1 2 3 4 5",    "output": "5 4 3 2 1", "sample": True,  "score": 50},
-            {"input": "1\n42",            "output": "42",         "sample": True,  "score": 20},
-            {"input": "4\n10 20 30 40",  "output": "40 30 20 10","sample": False, "score": 30},
-        ],
+        "title": "Проверка на палиндром",
+        "difficulty_code": "B",
+        "topics": ["strings"],
+        "description": "Дана строка. Определите, является ли она палиндромом.",
+        "input_format": "Одна строка из строчных латинских букв.",
+        "output_format": "Выведите YES если строка палиндром, иначе NO.",
+        "constraints": "1 ≤ |s| ≤ 10⁵",
+        "difficulty": Difficulty.easy,
+        "time_limit_ms": 1000,
+        "memory_limit_mb": 256,
+        "samples": [("racecar", "YES"), ("hello", "NO")],
     },
     {
-        "meta": {
-            "title": "Maximum Subarray",
-            "description": (
-                "Given an integer array `nums`, find the subarray with the largest sum, "
-                "and return its sum.\n\n"
-                "Use Kadane's algorithm for an O(n) solution."
-            ),
-            "input_format": "First line: integer n\nSecond line: n integers (can be negative)",
-            "output_format": "A single integer — the maximum subarray sum",
-            "constraints": "1 ≤ n ≤ 10^5\n-10^4 ≤ nums[i] ≤ 10^4",
-            "difficulty": "medium",
-            "time_limit_ms": 1500,
-            "memory_limit_mb": 128,
-        },
-        "tests": [
-            {"input": "9\n-2 1 -3 4 -1 2 1 -5 4", "output": "6",  "sample": True,  "score": 30},
-            {"input": "1\n1",                        "output": "1",  "sample": True,  "score": 20},
-            {"input": "5\n5 4 -1 7 8",              "output": "23", "sample": False, "score": 25},
-            {"input": "4\n-3 -1 -2 -4",             "output": "-1", "sample": False, "score": 25},
-        ],
+        "title": "Бинарный поиск",
+        "difficulty_code": "B1",
+        "topics": ["arrays", "sorting"],
+        "description": (
+            "Дан отсортированный массив из N чисел и Q запросов. "
+            "Для каждого запроса найдите позицию числа X в массиве (1-индексация) "
+            "или -1 если его нет."
+        ),
+        "input_format": "Первая строка: N Q. Вторая строка: N чисел. Следующие Q строк: одно число X.",
+        "output_format": "Для каждого запроса выведите позицию или -1.",
+        "constraints": "1 ≤ N, Q ≤ 10⁵, −10⁹ ≤ aᵢ, X ≤ 10⁹",
+        "difficulty": Difficulty.medium,
+        "time_limit_ms": 2000,
+        "memory_limit_mb": 256,
+        "samples": [("5 2\n1 3 5 7 9\n5\n4", "3\n-1")],
     },
     {
-        "meta": {
-            "title": "Binary Search",
-            "description": (
-                "Given a sorted array of n distinct integers and a target value, "
-                "return the index of target if found, or -1 if not found.\n\n"
-                "Your solution must run in O(log n) time."
-            ),
-            "input_format": "First line: integer n\nSecond line: n integers (sorted ascending)\nThird line: integer target",
-            "output_format": "Index of target (0-based) or -1",
-            "constraints": "1 ≤ n ≤ 10^6\n-10^9 ≤ nums[i] ≤ 10^9\nAll elements are distinct",
-            "difficulty": "easy",
-            "time_limit_ms": 500,
-            "memory_limit_mb": 128,
-        },
-        "tests": [
-            {"input": "6\n-1 0 3 5 9 12\n9",  "output": "4",  "sample": True,  "score": 30},
-            {"input": "6\n-1 0 3 5 9 12\n2",  "output": "-1", "sample": True,  "score": 30},
-            {"input": "5\n1 3 5 7 9\n7",      "output": "3",  "sample": False, "score": 40},
-        ],
+        "title": "Число Фибоначчи",
+        "difficulty_code": "C",
+        "topics": ["math", "dp"],
+        "description": "Найдите N-е число Фибоначчи по модулю 10⁹+7. F(1)=1, F(2)=1.",
+        "input_format": "Одно целое число N.",
+        "output_format": "N-е число Фибоначчи по модулю 10⁹+7.",
+        "constraints": "1 ≤ N ≤ 10¹⁸",
+        "difficulty": Difficulty.medium,
+        "time_limit_ms": 2000,
+        "memory_limit_mb": 256,
+        "samples": [("6", "8"), ("10", "55")],
     },
     {
-        "meta": {
-            "title": "Valid Parentheses",
-            "description": (
-                "Given a string containing only '(', ')', '{', '}', '[', ']', "
-                "determine if the input string is valid.\n\n"
-                "A string is valid if:\n"
-                "- Open brackets must be closed by the same type of brackets.\n"
-                "- Open brackets must be closed in the correct order."
-            ),
-            "input_format": "A single line containing the bracket string",
-            "output_format": "YES or NO",
-            "constraints": "1 ≤ |s| ≤ 10^4\ns consists only of ()[]{}",
-            "difficulty": "easy",
-            "time_limit_ms": 500,
-            "memory_limit_mb": 64,
-        },
-        "tests": [
-            {"input": "()",        "output": "YES", "sample": True,  "score": 25},
-            {"input": "()[]{}",    "output": "YES", "sample": True,  "score": 25},
-            {"input": "(]",        "output": "NO",  "sample": False, "score": 25},
-            {"input": "([)]",      "output": "NO",  "sample": False, "score": 25},
-        ],
+        "title": "Обход графа BFS",
+        "difficulty_code": "C1",
+        "topics": ["graphs"],
+        "description": (
+            "Дан ориентированный граф из N вершин и M рёбер. "
+            "Найдите кратчайшее расстояние от вершины 1 до всех остальных."
+        ),
+        "input_format": "Первая строка: N M. Следующие M строк: u v.",
+        "output_format": "N чисел — расстояния от вершины 1. -1 если недостижимо.",
+        "constraints": "1 ≤ N ≤ 10⁵, 0 ≤ M ≤ 2·10⁵",
+        "difficulty": Difficulty.medium,
+        "time_limit_ms": 3000,
+        "memory_limit_mb": 512,
+        "samples": [("4 4\n1 2\n1 3\n2 4\n3 4", "0 1 1 2")],
     },
     {
-        "meta": {
-            "title": "Longest Common Subsequence",
-            "description": (
-                "Given two strings `text1` and `text2`, return the length of their "
-                "longest common subsequence.\n\n"
-                "A subsequence is a sequence derived from a string by deleting some "
-                "characters without changing the relative order."
-            ),
-            "input_format": "First line: string text1\nSecond line: string text2",
-            "output_format": "A single integer — length of LCS",
-            "constraints": "1 ≤ |text1|, |text2| ≤ 1000\nStrings consist of lowercase letters only",
-            "difficulty": "medium",
-            "time_limit_ms": 2000,
-            "memory_limit_mb": 256,
-        },
-        "tests": [
-            {"input": "abcde\nace",    "output": "3", "sample": True,  "score": 30},
-            {"input": "abc\nabc",      "output": "3", "sample": True,  "score": 30},
-            {"input": "abc\ndef",      "output": "0", "sample": False, "score": 20},
-            {"input": "oxcpqrsvwf\nshmtulqrypy", "output": "2", "sample": False, "score": 20},
-        ],
+        "title": "Наибольшая общая подпоследовательность",
+        "difficulty_code": "D",
+        "topics": ["dp", "strings"],
+        "description": "Даны две строки A и B. Найдите длину их наибольшей общей подпоследовательности (LCS).",
+        "input_format": "Две строки A и B, каждая на отдельной строке.",
+        "output_format": "Длина LCS.",
+        "constraints": "1 ≤ |A|, |B| ≤ 1000",
+        "difficulty": Difficulty.hard,
+        "time_limit_ms": 3000,
+        "memory_limit_mb": 512,
+        "samples": [("abcde\nace", "3"), ("abc\nabc", "3")],
     },
     {
-        "meta": {
-            "title": "Merge Sort",
-            "description": (
-                "Implement the merge sort algorithm and sort an array of n integers "
-                "in ascending order."
-            ),
-            "input_format": "First line: integer n\nSecond line: n space-separated integers",
-            "output_format": "n integers sorted in ascending order, space-separated",
-            "constraints": "1 ≤ n ≤ 10^5\n-10^9 ≤ a[i] ≤ 10^9",
-            "difficulty": "medium",
-            "time_limit_ms": 2000,
-            "memory_limit_mb": 256,
-        },
-        "tests": [
-            {"input": "5\n5 3 1 4 2",      "output": "1 2 3 4 5",         "sample": True,  "score": 30},
-            {"input": "1\n42",              "output": "42",                 "sample": True,  "score": 20},
-            {"input": "8\n8 7 6 5 4 3 2 1","output": "1 2 3 4 5 6 7 8",   "sample": False, "score": 30},
-            {"input": "3\n-3 0 3",          "output": "-3 0 3",             "sample": False, "score": 20},
-        ],
+        "title": "Дерево отрезков",
+        "difficulty_code": "D1",
+        "topics": ["trees", "data-structures"],
+        "description": (
+            "Реализуйте структуру данных для точечного обновления "
+            "и запроса суммы на отрезке массива."
+        ),
+        "input_format": (
+            "Первая строка: N Q. Вторая строка: N чисел. "
+            "Следующие Q строк: '1 i x' (a[i]=x) или '2 l r' (сумма a[l..r])."
+        ),
+        "output_format": "Для каждого запроса типа 2 выведите ответ.",
+        "constraints": "1 ≤ N, Q ≤ 10⁵, −10⁹ ≤ aᵢ, x ≤ 10⁹",
+        "difficulty": Difficulty.hard,
+        "time_limit_ms": 3000,
+        "memory_limit_mb": 512,
+        "samples": [("5 4\n1 2 3 4 5\n2 1 3\n1 2 10\n2 1 3\n2 1 5", "6\n14\n23")],
     },
     {
-        "meta": {
-            "title": "N-th Prime Number",
-            "description": (
-                "Given n, find the n-th prime number.\n\n"
-                "Prime numbers: 2, 3, 5, 7, 11, 13, ..."
-            ),
-            "input_format": "A single integer n",
-            "output_format": "The n-th prime number",
-            "constraints": "1 ≤ n ≤ 10^4",
-            "difficulty": "medium",
-            "time_limit_ms": 2000,
-            "memory_limit_mb": 128,
-        },
-        "tests": [
-            {"input": "1",    "output": "2",      "sample": True,  "score": 25},
-            {"input": "6",    "output": "13",     "sample": True,  "score": 25},
-            {"input": "100",  "output": "541",    "sample": False, "score": 25},
-            {"input": "1000", "output": "7919",   "sample": False, "score": 25},
-        ],
-    },
-    {
-        "meta": {
-            "title": "Graph BFS — Shortest Path",
-            "description": (
-                "Given an unweighted undirected graph with n vertices and m edges, "
-                "find the shortest path (in edges) from vertex 1 to vertex n.\n\n"
-                "If no path exists, print -1."
-            ),
-            "input_format": "First line: integers n m\nNext m lines: pairs u v (edge between u and v)\nLast line: integers s t (source and target)",
-            "output_format": "Shortest path length or -1",
-            "constraints": "1 ≤ n ≤ 10^5\n0 ≤ m ≤ 2×10^5\n1 ≤ u, v ≤ n",
-            "difficulty": "hard",
-            "time_limit_ms": 2000,
-            "memory_limit_mb": 256,
-        },
-        "tests": [
-            {"input": "4 4\n1 2\n2 3\n3 4\n1 4\n1 4", "output": "1", "sample": True,  "score": 30},
-            {"input": "3 1\n1 2\n1 3",                 "output": "-1","sample": True,  "score": 30},
-            {"input": "6 7\n1 2\n1 3\n2 4\n3 4\n4 5\n5 6\n2 6\n1 6","output": "3","sample": False, "score": 40},
-        ],
+        "title": "Выпуклая оболочка",
+        "difficulty_code": "E",
+        "topics": ["geometry", "math"],
+        "description": "Даны N точек на плоскости. Найдите периметр их выпуклой оболочки.",
+        "input_format": "Первая строка: N. Следующие N строк: x y.",
+        "output_format": "Периметр с точностью до 6 знаков после запятой.",
+        "constraints": "3 ≤ N ≤ 10⁵, −10⁹ ≤ x, y ≤ 10⁹",
+        "difficulty": Difficulty.expert,
+        "time_limit_ms": 5000,
+        "memory_limit_mb": 512,
+        "samples": [("4\n0 0\n1 0\n0 1\n1 1", "4.000000")],
     },
 ]
 
-print("\n=== 3. Creating problems ===")
-created_problem_ids = []
+print("\nСоздаю задачи...")
+created_problems = []
+for pdata in PROBLEMS_DATA:
+    slug = slugify(pdata["title"])
+    topics = pdata.pop("topics")
+    difficulty_code = pdata.pop("difficulty_code")
 
-for p in PROBLEMS:
-    result = api("POST", "/problems/", p["meta"], TOKEN)
-    if result:
-        pid = result["id"]
-        created_problem_ids.append(pid)
-        print(f"  ✓ [{result['difficulty'].upper():6}] {result['title']} → {pid[:8]}…")
-
-        # Publish it
-        api("PATCH", f"/problems/{pid}", {"status": "published"}, TOKEN)
-
-        # Add test cases
-        for i, tc in enumerate(p["tests"]):
-            api("POST", "/test-cases/", {
-                "problem_id": pid,
-                "input_data": tc["input"],
-                "expected_output": tc["output"],
-                "is_sample": tc["sample"],
-                "order_num": i,
-                "score": tc["score"],
-            }, TOKEN)
-        print(f"       {len(p['tests'])} test cases added")
+    existing = db.query(Problem).filter(Problem.slug == slug).first()
+    if existing:
+        existing.difficulty_code = difficulty_code
+        created_problems.append(existing)
+        problem = existing
+        print(f"  = {pdata['title']} (обновлён, код={difficulty_code})")
     else:
-        print(f"  ✗ Failed: {p['meta']['title']} (maybe already exists)")
+        samples = pdata.pop("samples")
+        problem = Problem(
+            title=pdata["title"],
+            slug=slug,
+            description=pdata["description"],
+            input_format=pdata["input_format"],
+            output_format=pdata["output_format"],
+            constraints=pdata["constraints"],
+            difficulty=pdata["difficulty"],
+            difficulty_code=difficulty_code,
+            status=ProblemStatus.published,
+            time_limit_ms=pdata["time_limit_ms"],
+            memory_limit_mb=pdata["memory_limit_mb"],
+            author_id=admin_id,
+            is_public=True,
+        )
+        db.add(problem)
+        db.flush()
 
-# ─── 4. Contests ─────────────────────────────────────────────────────────────
+        for i, (inp, out) in enumerate(samples):
+            tc = TestCase(
+                problem_id=problem.id,
+                input_data=inp,
+                expected_output=out,
+                is_sample=True,
+                order_num=i,
+                score=1,
+            )
+            db.add(tc)
 
+        created_problems.append(problem)
+        print(f"  + {pdata['title']} (код={difficulty_code})")
+
+    db.flush()
+
+    # Привязываем темы
+    for slug_tag in topics:
+        tag = tags_by_slug.get(slug_tag)
+        if not tag:
+            continue
+        already = db.query(ProblemTagMap).filter(
+            ProblemTagMap.problem_id == problem.id,
+            ProblemTagMap.tag_id == tag.id,
+        ).first()
+        if not already:
+            db.add(ProblemTagMap(problem_id=problem.id, tag_id=tag.id))
+
+db.commit()
+
+# ── 5. Создаём 3 контеста ─────────────────────────────────────────
 now = datetime.utcnow()
 
 CONTESTS = [
     {
-        "title": "Weekly Round #1 — Beginner",
-        "description": "Perfect for newcomers! Easy problems to get you started with competitive programming.",
-        "starts_at": (now + timedelta(hours=2)).isoformat(),
-        "ends_at":   (now + timedelta(hours=4)).isoformat(),
-        "is_public": True,
+        "title": "Aetheris Round #1 (Div. 2)",
+        "slug": "aetheris-round-1-div-2",
+        "description": "Первый рейтинговый раунд Aetheris. Задачи для начинающих — уровень A–B.",
+        "contest_type": ContestType.rated,
+        "status": ContestStatus.running,
+        "starts_at": now - timedelta(hours=1),
+        "ends_at": now + timedelta(hours=2),
+        "problems_idx": [0, 1, 2],
     },
     {
-        "title": "Codeforce Killer — Div. 2",
-        "description": "Medium difficulty round. Master classic algorithms and data structures.",
-        "starts_at": (now - timedelta(minutes=30)).isoformat(),
-        "ends_at":   (now + timedelta(hours=1, minutes=30)).isoformat(),
-        "is_public": True,
+        "title": "Aetheris Round #2 (Div. 1)",
+        "slug": "aetheris-round-2-div-1",
+        "description": "Второй раунд для опытных участников. 5 задач: от B1 до D1.",
+        "contest_type": ContestType.rated,
+        "status": ContestStatus.upcoming,
+        "starts_at": now + timedelta(days=2),
+        "ends_at": now + timedelta(days=2, hours=3),
+        "problems_idx": [3, 4, 5, 6, 7],
     },
     {
-        "title": "Algorithm Masters Cup",
-        "description": "The hardest monthly challenge. Only for the elite coders. Graph algorithms, DP, advanced data structures.",
-        "starts_at": (now + timedelta(days=3)).isoformat(),
-        "ends_at":   (now + timedelta(days=3, hours=5)).isoformat(),
-        "is_public": True,
-    },
-    {
-        "title": "DP Marathon",
-        "description": "A weekend-long contest focused entirely on Dynamic Programming. 8 problems, all DP.",
-        "starts_at": (now + timedelta(days=7)).isoformat(),
-        "ends_at":   (now + timedelta(days=7, hours=3)).isoformat(),
-        "is_public": True,
-    },
-    {
-        "title": "Past Round — Div. 3 Archive",
-        "description": "Practice with problems from a previous contest round.",
-        "starts_at": (now - timedelta(days=2)).isoformat(),
-        "ends_at":   (now - timedelta(days=2, hours=-3)).isoformat(),
-        "is_public": True,
+        "title": "Educational Round #1",
+        "slug": "educational-round-1",
+        "description": "Образовательный раунд — рейтинг не изменяется. Практика алгоритмов.",
+        "contest_type": ContestType.unrated,
+        "status": ContestStatus.upcoming,
+        "starts_at": now + timedelta(days=5),
+        "ends_at": now + timedelta(days=5, hours=4),
+        "problems_idx": [0, 2, 4, 6, 7, 8],
     },
 ]
 
-print("\n=== 4. Creating contests ===")
-created_contests = []
+print("\nСоздаю контесты...")
+for cdata in CONTESTS:
+    problems_idx = cdata.pop("problems_idx")
 
-for c in CONTESTS:
-    result = api("POST", "/contests/", c, TOKEN)
-    if result:
-        created_contests.append(result)
-        print(f"  ✓ {result['title']} → {result['id'][:8]}…")
-    else:
-        print(f"  ✗ Failed: {c['title']}")
+    contest = Contest(
+        title=cdata["title"],
+        slug=cdata["slug"],
+        description=cdata["description"],
+        contest_type=cdata["contest_type"],
+        status=cdata["status"],
+        starts_at=cdata["starts_at"],
+        ends_at=cdata["ends_at"],
+        author_id=admin_id,
+        is_public=True,
+    )
+    db.add(contest)
+    db.flush()
 
-# Add problems to contests
-if created_problem_ids and created_contests:
-    print("\n=== 5. Adding problems to contests ===")
-    for ci, contest in enumerate(created_contests):
-        # Add 3-5 problems per contest depending on difficulty level
-        probs_to_add = created_problem_ids[:4] if ci < 2 else created_problem_ids[3:7]
-        for order, pid in enumerate(probs_to_add):
-            api("POST", "/contest-problems/", {
-                "contest_id": contest["id"],
-                "problem_id": pid,
-                "order_num": order,
-                "points": 100 * (order + 1),
-            }, TOKEN)
-        print(f"  ✓ {contest['title'][:40]}… — {len(probs_to_add)} problems")
+    for order, idx in enumerate(problems_idx):
+        if idx < len(created_problems):
+            cp = ContestProblem(
+                contest_id=contest.id,
+                problem_id=created_problems[idx].id,
+                label=chr(65 + order),
+                order_num=order,
+                max_score=100,
+            )
+            db.add(cp)
 
-# ─── Summary ─────────────────────────────────────────────────────────────────
+    cnt = len([i for i in problems_idx if i < len(created_problems)])
+    status_label = {"running": "ИДЁТ", "upcoming": "Предстоящий", "finished": "Завершён"}.get(
+        contest.status.value, contest.status.value
+    )
+    print(f"  + [{status_label}] {contest.title} — {cnt} задач")
 
-print("\n" + "="*50)
-print("DONE!")
-print(f"  Problems created: {len(created_problem_ids)}/{len(PROBLEMS)}")
-print(f"  Contests created: {len(created_contests)}/{len(CONTESTS)}")
+db.commit()
+db.close()
+
+print("\n" + "="*55)
+print("Готово!")
+print(f"  Задачи: {len(created_problems)}")
+print(f"  Теги:   {len(TAGS_DATA)}")
+print(f"  Контесты: {len(CONTESTS)}")
 print()
-print("HOW ROLES WORK:")
-print("  admin     → can create/delete problems, contests, manage everything")
-print("  moderator → can create problems, contests, but not delete users")
-print("  user      → regular competitor")
-print()
-print("TO PROMOTE A USER:")
-print("  python promote.py <username> <admin|moderator|user>")
-print()
-rows_final = db_fetchall("SELECT username, role FROM users")
-print("Current users:")
-for u, r in rows_final:
-    print(f"  {u:20} → {r}")
+print("Для входа как администратор:")
+print("  Email: admin@aetheris.io")
+print("  Пароль: admin123")
+print("="*55)

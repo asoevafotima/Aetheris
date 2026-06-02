@@ -35,6 +35,7 @@ class Problem(Base):
     attempt_count = Column(Integer, default=0)
     rating = Column(Float, default=0.0)
     is_public = Column(Boolean, default=True)
+    difficulty_code = Column(String(3), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -45,3 +46,7 @@ class Problem(Base):
     editorial = relationship("Editorial", back_populates="problem", uselist=False)
     bookmarks = relationship("ProblemBookmark", back_populates="problem")
     weak_topics = relationship("UserWeakTopic", back_populates="problem")
+
+    @property
+    def tags(self):
+        return [tm.tag for tm in self.tag_map if tm.tag]

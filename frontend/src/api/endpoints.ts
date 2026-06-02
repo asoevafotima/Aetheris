@@ -88,12 +88,19 @@ export const contestsApi = {
     api.post(`/contest-participants/register/${contestId}`).then(r => r.data),
   unregister: (contestId: string) =>
     api.delete(`/contest-participants/unregister/${contestId}`),
+  myRegistration: (contestId: string) =>
+    api.get(`/contest-participants/me/${contestId}`).then(r => r.data).catch((e) => {
+      if (e?.response?.status === 404) return null;
+      throw e;
+    }),
   participants: (contestId: string) =>
     api.get(`/contest-participants/${contestId}`).then(r => r.data),
   problems: (contestId: string) =>
     api.get(`/contest-problems/${contestId}`).then(r => r.data),
   standings: (contestId: string) =>
     api.get<ContestStanding[]>(`/contest-standings/${contestId}`).then(r => r.data),
+  addProblem: (contestId: string, problemId: string, label?: string) =>
+    api.post('/contest-problems/', { contest_id: contestId, problem_id: problemId, label }).then(r => r.data),
 };
 
 // Duels

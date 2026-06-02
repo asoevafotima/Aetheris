@@ -8,9 +8,15 @@ from users.models import User
 router = APIRouter(prefix="/problems", tags=["problems"])
 
 @router.get("/", response_model=list[schemas.ProblemShortResponse])
-def list_problems(skip: int = 0, limit: int = 20,
-                  difficulty: str = Query(None), db: Session = Depends(get_db)):
-    return crud.get_all_problems(db, skip, limit, difficulty)
+def list_problems(
+    skip: int = 0,
+    limit: int = 20,
+    difficulty: str = Query(None),
+    difficulty_code: str = Query(None),
+    topic: str = Query(None),
+    db: Session = Depends(get_db),
+):
+    return crud.get_all_problems(db, skip, limit, difficulty, difficulty_code, topic)
 
 @router.get("/{slug}", response_model=schemas.ProblemResponse)
 def get_problem(slug: str, db: Session = Depends(get_db)):

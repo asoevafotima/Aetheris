@@ -1,20 +1,63 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from .models import Problem
 from .schemas import ProblemCreate, ProblemUpdate
 from slugify import slugify
 import uuid
 
 def get_problem_by_id(db: Session, problem_id: uuid.UUID):
-    return db.query(Problem).filter(Problem.id == problem_id).first()
+    return (
+        db.query(Problem)
+        .options(joinedload(Problem.tag_map))
+        .filter(Problem.id == problem_id)
+        .first()
+    )
 
 def get_problem_by_slug(db: Session, slug: str):
-    return db.query(Problem).filter(Problem.slug == slug).first()
+    return (
+        db.query(Problem)
+        .options(joinedload(Problem.tag_map))
+        .filter(Problem.slug == slug)
+        .first()
+    )
 
-def get_all_problems(db: Session, skip: int = 0, limit: int = 20, difficulty: str = None):
-    query = db.query(Problem).filter(Problem.is_public == True)
+def _difficulty_code_sort_key(code: str | None) -> tuple:
+    if not code:
+        return (999, 0)
+    letter = code[0].upper()
+    suffix = int(code[1:]) if len(code) > 1 and code[1:].isdigit() else 0
+    return (ord(letter) - ord('A'), suffix)
+
+def get_all_problems(
+    db: Session,
+    skip: int = 0,
+    limit: int = 20,
+    difficulty: str = None,
+    difficulty_code: str = None,
+    topic: str = None,
+):
+    from problem_tag_map.models import ProblemTagMap
+    from problem_tags.models import ProblemTag
+
+    query = (
+        db.query(Problem)
+        .options(joinedload(Problem.tag_map))
+        .filter(Problem.is_public == True)
+    )
     if difficulty:
         query = query.filter(Problem.difficulty == difficulty)
-    return query.offset(skip).limit(limit).all()
+    if difficulty_code:
+        query = query.filter(Problem.difficulty_code == difficulty_code)
+    if topic:
+        query = (
+            query
+            .join(ProblemTagMap, ProblemTagMap.problem_id == Problem.id)
+            .join(ProblemTag, ProblemTag.id == ProblemTagMap.tag_id)
+            .filter(ProblemTag.slug == topic)
+        )
+
+    problems = query.offset(skip).limit(limit).all()
+    problems.sort(key=lambda p: _difficulty_code_sort_key(p.difficulty_code))
+    return problems
 
 def create_problem(db: Session, data: ProblemCreate, author_id: uuid.UUID):
     slug = slugify(data.title)
