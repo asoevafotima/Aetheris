@@ -11,7 +11,16 @@ def create_submission(db: Session, data: SubmissionCreate, user_id: uuid.UUID):
     return db_sub
 
 def get_submission_by_id(db: Session, submission_id: uuid.UUID):
-    return db.query(Submission).filter(Submission.id == submission_id).first()
+    from sqlalchemy.orm import selectinload
+    from submission_results.models import SubmissionResult
+    return (
+        db.query(Submission)
+        .options(
+            selectinload(Submission.results).selectinload(SubmissionResult.test_case)
+        )
+        .filter(Submission.id == submission_id)
+        .first()
+    )
 
 def get_submissions_by_user(db: Session, user_id: uuid.UUID, skip: int = 0, limit: int = 20):
     return db.query(Submission).filter(

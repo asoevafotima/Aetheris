@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
@@ -13,5 +14,5 @@ def my_achievements(db: Session = Depends(get_db),
     return crud.get_achievements_by_user(db, current_user.id)
 
 @router.get("/{user_id}", response_model=list[schemas.UserAchievementResponse])
-def user_achievements(user_id, db: Session = Depends(get_db)):
+def user_achievements(user_id: UUID, db: Session = Depends(get_db)):
     return crud.get_achievements_by_user(db, user_id)

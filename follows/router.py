@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
@@ -13,7 +14,7 @@ def follow(data: schemas.FollowCreate, db: Session = Depends(get_db),
     return crud.follow_user(db, current_user.id, data.following_id)
 
 @router.delete("/{following_id}", status_code=204)
-def unfollow(following_id, db: Session = Depends(get_db),
+def unfollow(following_id: UUID, db: Session = Depends(get_db),
              current_user: User = Depends(get_current_user)):
     crud.unfollow_user(db, current_user.id, following_id)
 

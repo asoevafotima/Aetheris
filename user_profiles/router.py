@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
@@ -16,7 +17,7 @@ def get_my_profile(db: Session = Depends(get_db),
     return profile
 
 @router.get("/{user_id}", response_model=schemas.UserProfileResponse)
-def get_profile(user_id, db: Session = Depends(get_db)):
+def get_profile(user_id: UUID, db: Session = Depends(get_db)):
     profile = crud.get_profile_by_user_id(db, user_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")

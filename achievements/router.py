@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
@@ -17,7 +18,7 @@ def create_achievement(data: schemas.AchievementCreate, db: Session = Depends(ge
     return crud.create_achievement(db, data)
 
 @router.delete("/{achievement_id}", status_code=204)
-def delete_achievement(achievement_id, db: Session = Depends(get_db),
+def delete_achievement(achievement_id: UUID, db: Session = Depends(get_db),
                        current_user: User = Depends(require_role(["admin"]))):
     crud.delete_achievement(db, achievement_id)
     

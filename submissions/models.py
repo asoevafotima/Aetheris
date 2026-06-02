@@ -30,9 +30,23 @@ class Submission(Base):
     memory_mb = Column(Float, nullable=True)
     score = Column(Float, default=0.0)
     error_message = Column(Text, nullable=True)
+    ai_hint = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="submissions")
     problem = relationship("Problem", back_populates="submissions")
     contest = relationship("Contest", back_populates="submissions")
     results = relationship("SubmissionResult", back_populates="submission", cascade="all, delete-orphan")
+
+    @property
+    def test_results(self):
+        items = []
+        for r in (self.results or []):
+            tc = r.test_case
+            items.append({
+                "test_number": (tc.order_num + 1) if tc else 0,
+                "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+                "time_ms": r.time_ms,
+                "passed": (r.status.value if hasattr(r.status, "value") else str(r.status)) == "accepted",
+            })
+        return sorted(items, key=lambda x: x["test_number"])

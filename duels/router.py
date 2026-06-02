@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
@@ -22,14 +23,14 @@ def my_duels(skip: int = 0, limit: int = 20, db: Session = Depends(get_db),
     return crud.get_duels_by_user(db, current_user.id, skip, limit)
 
 @router.get("/{duel_id}", response_model=schemas.DuelResponse)
-def get_duel(duel_id, db: Session = Depends(get_db)):
+def get_duel(duel_id: UUID, db: Session = Depends(get_db)):
     duel = crud.get_duel_by_id(db, duel_id)
     if not duel:
         raise HTTPException(status_code=404, detail="Duel not found")
     return duel
 
 @router.post("/{duel_id}/accept", response_model=schemas.DuelResponse)
-def accept_duel(duel_id, db: Session = Depends(get_db),
+def accept_duel(duel_id: UUID, db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)):
     duel = crud.accept_duel(db, duel_id, current_user.id)
     if not duel:
@@ -37,6 +38,6 @@ def accept_duel(duel_id, db: Session = Depends(get_db),
     return duel
 
 @router.post("/{duel_id}/cancel", status_code=204)
-def cancel_duel(duel_id, db: Session = Depends(get_db),
+def cancel_duel(duel_id: UUID, db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)):
     crud.cancel_duel(db, duel_id)

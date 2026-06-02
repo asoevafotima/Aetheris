@@ -23,9 +23,9 @@ def get_problem_by_slug(db: Session, slug: str):
 def _difficulty_code_sort_key(code: str | None) -> tuple:
     if not code:
         return (999, 0)
-    letter = code[0].upper()
+    letter = code[0].lower()
     suffix = int(code[1:]) if len(code) > 1 and code[1:].isdigit() else 0
-    return (ord(letter) - ord('A'), suffix)
+    return (ord(letter) - ord('a'), suffix)
 
 def get_all_problems(
     db: Session,
@@ -34,6 +34,7 @@ def get_all_problems(
     difficulty: str = None,
     difficulty_code: str = None,
     topic: str = None,
+    tag: str = None,
 ):
     from problem_tag_map.models import ProblemTagMap
     from problem_tags.models import ProblemTag
@@ -46,13 +47,15 @@ def get_all_problems(
     if difficulty:
         query = query.filter(Problem.difficulty == difficulty)
     if difficulty_code:
-        query = query.filter(Problem.difficulty_code == difficulty_code)
+        query = query.filter(Problem.difficulty_code == difficulty_code.lower())
     if topic:
+        query = query.filter(Problem.topic == topic)
+    if tag:
         query = (
             query
             .join(ProblemTagMap, ProblemTagMap.problem_id == Problem.id)
             .join(ProblemTag, ProblemTag.id == ProblemTagMap.tag_id)
-            .filter(ProblemTag.slug == topic)
+            .filter(ProblemTag.slug == tag)
         )
 
     problems = query.offset(skip).limit(limit).all()

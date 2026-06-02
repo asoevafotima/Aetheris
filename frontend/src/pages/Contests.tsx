@@ -118,6 +118,21 @@ function ContestCard({ contest }: { contest: Contest }) {
   );
 }
 
+// ─── Helpers ───────────────────────────────────────────────────
+function toInputDT(date: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
+}
+
+function defaultDates() {
+  const start = new Date();
+  start.setDate(start.getDate() + 1);
+  start.setHours(12, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(end.getHours() + 2);
+  return { starts_at: toInputDT(start), ends_at: toInputDT(end) };
+}
+
 // ─── Create contest modal ──────────────────────────────────────
 function CreateContestModal({ onClose }: { onClose: () => void }) {
   const navigate   = useNavigate();
@@ -128,8 +143,7 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
     title: '',
     description: '',
-    starts_at: '',
-    ends_at: '',
+    ...defaultDates(),
     is_public: true,
     max_participants: '',
   });
@@ -150,17 +164,22 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
 
   const createMut = useMutation({
     mutationFn: async () => {
-      if (!form.title.trim())    throw new Error('Введите название');
-      if (!form.starts_at)       throw new Error('Укажите дату начала');
-      if (!form.ends_at)         throw new Error('Укажите дату конца');
-      const s = new Date(form.starts_at), e = new Date(form.ends_at);
-      if (e <= s)                throw new Error('Дата конца должна быть позже начала');
+      if (!form.title.trim()) throw new Error('Введите название');
+      if (!form.starts_at)    throw new Error('Укажите дату начала');
+      if (!form.ends_at)      throw new Error('Укажите дату конца');
+      // Append :00 to make it unambiguous for Date parsing across all browsers
+      const s = new Date(form.starts_at + ':00');
+      const e = new Date(form.ends_at   + ':00');
+      if (isNaN(s.getTime())) throw new Error('Неверный формат даты начала');
+      if (isNaN(e.getTime())) throw new Error('Неверный формат даты конца');
+      if (e <= s)             throw new Error('Дата и время конца должны быть позже даты начала');
 
       const contest = await contestsApi.create({
         title: form.title.trim(),
         description: form.description.trim() || undefined,
-        starts_at: s.toISOString(),
-        ends_at:   e.toISOString(),
+        // Send as local ISO string without timezone — backend stores as-is
+        starts_at: form.starts_at + ':00',
+        ends_at:   form.ends_at   + ':00',
         is_public: form.is_public,
         max_participants: form.max_participants ? parseInt(form.max_participants) : undefined,
       });
@@ -184,7 +203,20 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
   });
 
   const f = (k: keyof typeof form, v: string | boolean) =>
-    setForm(prev => ({ ...prev, [k]: v }));
+    setForm(prev => {
+      const next = { ...prev, [k]: v };
+      // Auto-push ends_at forward if it would be <= new starts_at
+      if (k === 'starts_at' && typeof v === 'string' && v) {
+        const s = new Date(v + ':00');
+        const e = new Date(next.ends_at + ':00');
+        if (!isNaN(s.getTime()) && (isNaN(e.getTime()) || e <= s)) {
+          const autoEnd = new Date(s);
+          autoEnd.setHours(autoEnd.getHours() + 2);
+          next.ends_at = toInputDT(autoEnd);
+        }
+      }
+      return next;
+    });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -249,6 +281,7 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
                 type="datetime-local"
                 className="input-theme w-full rounded-lg px-3 py-2.5 text-sm"
                 value={form.ends_at}
+                min={form.starts_at || undefined}
                 onChange={e => f('ends_at', e.target.value)}
               />
             </div>

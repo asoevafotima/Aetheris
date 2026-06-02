@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from database import get_db
@@ -57,7 +58,7 @@ def add_problem(data: schemas.ContestProblemCreate, db: Session = Depends(get_db
 
 
 @router.patch("/{cp_id}", response_model=schemas.ContestProblemResponse)
-def update_problem(cp_id, data: schemas.ContestProblemUpdate, db: Session = Depends(get_db),
+def update_problem(cp_id: UUID, data: schemas.ContestProblemUpdate, db: Session = Depends(get_db),
                    current_user: User = Depends(get_current_user)):
     cp = crud.get_contest_problem_by_id(db, cp_id)
     if not cp:
@@ -70,7 +71,7 @@ def update_problem(cp_id, data: schemas.ContestProblemUpdate, db: Session = Depe
 
 
 @router.delete("/{cp_id}", status_code=204)
-def remove_problem(cp_id, db: Session = Depends(get_db),
+def remove_problem(cp_id: UUID, db: Session = Depends(get_db),
                    current_user: User = Depends(get_current_user)):
     cp = crud.get_contest_problem_by_id(db, cp_id)
     if not cp:

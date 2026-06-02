@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from database import get_db
@@ -32,7 +33,7 @@ def create_contest(data: schemas.ContestCreate, db: Session = Depends(get_db),
 
 
 @router.patch("/{contest_id}", response_model=schemas.ContestResponse)
-def update_contest(contest_id, data: schemas.ContestUpdate, db: Session = Depends(get_db),
+def update_contest(contest_id: UUID, data: schemas.ContestUpdate, db: Session = Depends(get_db),
                    current_user: User = Depends(require_role(["admin", "moderator"]))):
     contest = crud.update_contest(db, contest_id, data)
     if not contest:
@@ -41,7 +42,7 @@ def update_contest(contest_id, data: schemas.ContestUpdate, db: Session = Depend
 
 
 @router.delete("/{contest_id}", status_code=204)
-def delete_contest(contest_id, db: Session = Depends(get_db),
+def delete_contest(contest_id: UUID, db: Session = Depends(get_db),
                    current_user: User = Depends(require_role(["admin"]))):
     crud.delete_contest(db, contest_id)
 

@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
@@ -12,7 +13,7 @@ def list_tags(db: Session = Depends(get_db)):
     return crud.get_all_tags(db)
 
 @router.get("/{tag_id}", response_model=schemas.ProblemTagResponse)
-def get_tag(tag_id, db: Session = Depends(get_db)):
+def get_tag(tag_id: UUID, db: Session = Depends(get_db)):
     tag = crud.get_tag_by_id(db, tag_id)
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
@@ -24,7 +25,7 @@ def create_tag(data: schemas.ProblemTagCreate, db: Session = Depends(get_db),
     return crud.create_tag(db, data)
 
 @router.patch("/{tag_id}", response_model=schemas.ProblemTagResponse)
-def update_tag(tag_id, data: schemas.ProblemTagUpdate, db: Session = Depends(get_db),
+def update_tag(tag_id: UUID, data: schemas.ProblemTagUpdate, db: Session = Depends(get_db),
                current_user: User = Depends(require_role(["admin"]))):
     tag = crud.update_tag(db, tag_id, data)
     if not tag:
@@ -32,6 +33,6 @@ def update_tag(tag_id, data: schemas.ProblemTagUpdate, db: Session = Depends(get
     return tag
 
 @router.delete("/{tag_id}", status_code=204)
-def delete_tag(tag_id, db: Session = Depends(get_db),
+def delete_tag(tag_id: UUID, db: Session = Depends(get_db),
                current_user: User = Depends(require_role(["admin"]))):
     crud.delete_tag(db, tag_id)

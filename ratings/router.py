@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
@@ -13,6 +14,6 @@ def my_rating_history(skip: int = 0, limit: int = 20, db: Session = Depends(get_
     return crud.get_rating_history_by_user(db, current_user.id, skip, limit)
 
 @router.get("/{user_id}", response_model=list[schemas.RatingResponse])
-def user_rating_history(user_id, skip: int = 0, limit: int = 20,
+def user_rating_history(user_id: UUID, skip: int = 0, limit: int = 20,
                         db: Session = Depends(get_db)):
     return crud.get_rating_history_by_user(db, user_id, skip, limit)

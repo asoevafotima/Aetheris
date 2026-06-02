@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
@@ -24,6 +24,15 @@ class ContestCreate(BaseModel):
     ends_at: datetime
     is_public: bool = True
     max_participants: Optional[int] = None
+
+    @model_validator(mode='after')
+    def validate_dates(self):
+        # Strip timezone for comparison if needed
+        s = self.starts_at.replace(tzinfo=None) if self.starts_at.tzinfo else self.starts_at
+        e = self.ends_at.replace(tzinfo=None) if self.ends_at.tzinfo else self.ends_at
+        if e <= s:
+            raise ValueError('Дата и время конца контеста должны быть позже даты начала')
+        return self
 
 class ContestUpdate(BaseModel):
     title: Optional[str] = None

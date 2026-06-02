@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
@@ -18,5 +19,5 @@ def remove_tag(data: schemas.ProblemTagMapCreate, db: Session = Depends(get_db),
     crud.remove_tag_from_problem(db, data.problem_id, data.tag_id)
 
 @router.get("/problem/{problem_id}", response_model=list[schemas.ProblemTagMapResponse])
-def get_tags_for_problem(problem_id, db: Session = Depends(get_db)):
+def get_tags_for_problem(problem_id: UUID, db: Session = Depends(get_db)):
     return crud.get_tags_by_problem(db, problem_id)

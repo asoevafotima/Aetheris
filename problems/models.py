@@ -35,7 +35,8 @@ class Problem(Base):
     attempt_count = Column(Integer, default=0)
     rating = Column(Float, default=0.0)
     is_public = Column(Boolean, default=True)
-    difficulty_code = Column(String(3), nullable=True, index=True)
+    difficulty_code = Column(String(10), nullable=True, index=True)
+    topic = Column(String(100), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

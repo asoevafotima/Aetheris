@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
@@ -28,7 +29,7 @@ def create_team(data: schemas.TeamCreate, db: Session = Depends(get_db),
     return team
 
 @router.patch("/{team_id}", response_model=schemas.TeamResponse)
-def update_team(team_id, data: schemas.TeamUpdate, db: Session = Depends(get_db),
+def update_team(team_id: UUID, data: schemas.TeamUpdate, db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)):
     team = crud.get_team_by_id(db, team_id)
     if not team:
@@ -38,7 +39,7 @@ def update_team(team_id, data: schemas.TeamUpdate, db: Session = Depends(get_db)
     return crud.update_team(db, team_id, data)
 
 @router.delete("/{team_id}", status_code=204)
-def delete_team(team_id, db: Session = Depends(get_db),
+def delete_team(team_id: UUID, db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)):
     team = crud.get_team_by_id(db, team_id)
     if not team:

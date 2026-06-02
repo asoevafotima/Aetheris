@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
@@ -32,13 +33,18 @@ def my_submissions(
 
 
 @router.get("/problem/{problem_id}", response_model=list[schemas.SubmissionShortResponse])
-def submissions_by_problem(problem_id, skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
+def submissions_by_problem(
+    problem_id: UUID,
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+):
     return crud.get_submissions_by_problem(db, problem_id, skip, limit)
 
 
-@router.get("/{submission_id}", response_model=schemas.SubmissionResponse)
+@router.get("/{submission_id}", response_model=schemas.SubmissionDetailResponse)
 def get_submission(
-    submission_id,
+    submission_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

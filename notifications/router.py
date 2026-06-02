@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
@@ -18,7 +19,7 @@ def unread_count(db: Session = Depends(get_db),
     return {"count": crud.get_unread_count(db, current_user.id)}
 
 @router.post("/{notification_id}/read", status_code=204)
-def mark_read(notification_id, db: Session = Depends(get_db),
+def mark_read(notification_id: UUID, db: Session = Depends(get_db),
               current_user: User = Depends(get_current_user)):
     crud.mark_as_read(db, notification_id)
 
@@ -28,6 +29,6 @@ def mark_all_read(db: Session = Depends(get_db),
     crud.mark_all_as_read(db, current_user.id)
 
 @router.delete("/{notification_id}", status_code=204)
-def delete_notification(notification_id, db: Session = Depends(get_db),
+def delete_notification(notification_id: UUID, db: Session = Depends(get_db),
                         current_user: User = Depends(get_current_user)):
     crud.delete_notification(db, notification_id)
