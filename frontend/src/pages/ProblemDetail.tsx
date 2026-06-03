@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
@@ -32,6 +32,8 @@ const HINT_TYPES = [
 
 export function ProblemDetail() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const contestId = searchParams.get('contest') ?? undefined;
   const qc = useQueryClient();
   const [lang, setLang]           = useState('python');
   const [code, setCode]           = useState(STARTERS.python);
@@ -65,7 +67,7 @@ export function ProblemDetail() {
   });
 
   const submitMut = useMutation({
-    mutationFn: () => submissionsApi.submit({ problem_id: problem!.id, language: lang, code }),
+    mutationFn: () => submissionsApi.submit({ problem_id: problem!.id, language: lang, code, contest_id: contestId }),
     onSuccess: (sub) => {
       setLastSubId(sub.id);
       setPolling(true);

@@ -18,3 +18,7 @@ class ContestStanding(Base):
 
     contest = relationship("Contest", back_populates="standings")
     user = relationship("User")
+
+    @property
+    def username(self):
+        return self.user.username if self.user else None

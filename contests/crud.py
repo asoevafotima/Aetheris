@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from .models import Contest, ContestStatus
 from .schemas import ContestCreate, ContestUpdate
 from slugify import slugify
+from datetime import datetime
 import uuid
 
 
@@ -11,15 +12,34 @@ def _to_uuid(val) -> uuid.UUID:
     return uuid.UUID(str(val))
 
 
+def _sync_status(db: Session, contest: Contest) -> Contest:
+    """Auto-transition contest status based on current UTC time."""
+    if contest.status in (ContestStatus.upcoming, ContestStatus.running):
+        now = datetime.utcnow()
+        if contest.status == ContestStatus.upcoming and now >= contest.starts_at:
+            contest.status = ContestStatus.running
+            db.commit()
+        elif contest.status == ContestStatus.running and now >= contest.ends_at:
+            contest.status = ContestStatus.finished
+            db.commit()
+    return contest
+
+
 def get_contest_by_id(db: Session, contest_id):
-    return db.query(Contest).filter(Contest.id == _to_uuid(contest_id)).first()
+    c = db.query(Contest).filter(Contest.id == _to_uuid(contest_id)).first()
+    return _sync_status(db, c) if c else None
 
 
 def get_contest_by_slug(db: Session, slug: str):
-    return db.query(Contest).filter(Contest.slug == slug).first()
+    c = db.query(Contest).filter(Contest.slug == slug).first()
+    return _sync_status(db, c) if c else None
 
 
 def get_all_contests(db: Session, skip: int = 0, limit: int = 20, status: str = None):
+    contests = db.query(Contest).filter(Contest.is_public == True).all()
+    # Sync statuses before filtering
+    for c in contests:
+        _sync_status(db, c)
     query = db.query(Contest).filter(Contest.is_public == True)
     if status:
         query = query.filter(Contest.status == status)

@@ -10,7 +10,10 @@ def _to_uuid(val) -> uuid.UUID:
 
 
 def get_standings_by_contest(db: Session, contest_id):
-    return db.query(ContestStanding).filter(
+    from sqlalchemy.orm import selectinload
+    return db.query(ContestStanding).options(
+        selectinload(ContestStanding.user)
+    ).filter(
         ContestStanding.contest_id == _to_uuid(contest_id)
     ).order_by(ContestStanding.rank).all()
 

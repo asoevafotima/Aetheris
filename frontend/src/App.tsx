@@ -23,6 +23,8 @@ import { Settings }       from './pages/Settings';
 import { Notifications }  from './pages/Notifications';
 import { Training }       from './pages/Training';
 import { AdminPanel }     from './pages/AdminPanel';
+import { CreateProblem }  from './pages/CreateProblem';
+import { AuthCallback }   from './pages/AuthCallback';
 
 const qc = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -63,13 +65,15 @@ export default function App() {
         <AppInit>
           <Routes>
             <Route path="/"         element={<Landing />} />
-            <Route path="/login"    element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-            <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+            <Route path="/login"         element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+            <Route path="/register"      element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
               <Route path="/dashboard"       element={<Dashboard />} />
-              <Route path="/problems"        element={<Problems />} />
-              <Route path="/problems/:slug"  element={<ProblemDetail />} />
+              <Route path="/problems"           element={<Problems />} />
+              <Route path="/problems/create"  element={<CreateProblem />} />
+              <Route path="/problems/:slug"   element={<ProblemDetail />} />
               <Route path="/contests"        element={<Contests />} />
               <Route path="/contests/:slug"  element={<ContestDetail />} />
               <Route path="/duels"           element={<Duels />} />

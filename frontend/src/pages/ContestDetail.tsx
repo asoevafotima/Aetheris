@@ -268,7 +268,8 @@ function ChatPanel({
 }) {
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
-  const canSend = !!userId;
+  // During a live contest only the organizer can write; everyone else is read-only
+  const canSend = !!userId && (!isLive || isOrganizer);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -340,6 +341,11 @@ function ChatPanel({
           >
             <Send size={14} />
           </button>
+        </div>
+      ) : isLive && !!userId ? (
+        <div className="p-3 border-t border-[var(--border)] flex items-center gap-2 bg-blue-500/8 border-t-blue-500/20">
+          <Snowflake size={14} className="text-blue-400" />
+          <span className="text-sm text-blue-400">Чат заморожен во время контеста</span>
         </div>
       ) : (
         <div className="p-3 border-t border-[var(--border)] flex items-center gap-2 bg-[var(--surface-2)]">
@@ -430,9 +436,10 @@ export function ContestDetail() {
     }
   }, [apiMessages]);
 
-  // Contest timing
-  const start   = contest ? new Date(contest.starts_at) : new Date();
-  const end     = contest ? new Date(contest.ends_at)   : new Date();
+  // Contest timing — append 'Z' so the browser treats the naive UTC string as UTC, not local time
+  const toUtc = (s: string) => new Date(s.endsWith('Z') || s.includes('+') ? s : s + 'Z');
+  const start   = contest ? toUtc(contest.starts_at) : new Date();
+  const end     = contest ? toUtc(contest.ends_at)   : new Date();
   const isLive  = contest ? !isFuture(start) && !isPast(end) : false;
   const isOver  = contest ? isPast(end) : false;
   const isFrozenNow = isLive && differenceInMinutes(end, new Date()) < 30;

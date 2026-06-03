@@ -52,6 +52,8 @@ class SubmissionDetailResponse(SubmissionResponse):
 
 class SubmissionShortResponse(BaseModel):
     id: UUID
+    problem_id: UUID
+    contest_id: Optional[UUID] = None
     status: SubmissionStatus
     language: str
     created_at: datetime

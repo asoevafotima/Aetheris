@@ -7,6 +7,7 @@ class ContestStandingResponse(BaseModel):
     id: UUID
     contest_id: UUID
     user_id: UUID
+    username: Optional[str] = None
     score: int
     penalty: int
     rank: Optional[int]

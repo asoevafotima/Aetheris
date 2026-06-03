@@ -129,6 +129,19 @@ async def chat_ws(
             if not content:
                 continue
 
+            # Check if contest is live — only organizer can write during contest
+            from contests.crud import get_contest_by_id
+            from contests.models import ContestStatus
+            from datetime import datetime as _dt
+            _contest = get_contest_by_id(db, uuid.UUID(contest_id))
+            if _contest:
+                _now = _dt.utcnow()
+                _live = _contest.starts_at <= _now <= _contest.ends_at
+                _is_organizer = str(_contest.author_id) == user_id
+                if _live and not _is_organizer:
+                    await websocket.send_text(json.dumps({"type": "frozen", "message": "Чат заморожен во время контеста"}))
+                    continue
+
             # Save to DB
             from chat_messages.crud import create_message
             msg = create_message(db, uuid.UUID(user_id), content, uuid.UUID(contest_id))

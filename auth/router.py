@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -114,12 +115,17 @@ async def google_login(request: Request):
     redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
-@router.get("/google/callback", response_model=schemas.TokenResponse)
+@router.get("/google/callback")
 async def google_callback(request: Request, db: Session = Depends(get_db)):
-    token = await oauth.google.authorize_access_token(request)
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception:
+        return RedirectResponse(f"{frontend_url}/login?error=google_failed")
+
     user_info = token.get("userinfo")
     if not user_info:
-        raise HTTPException(status_code=400, detail="Failed to get user info from Google")
+        return RedirectResponse(f"{frontend_url}/login?error=no_userinfo")
 
     email = user_info.get("email")
     user = get_user_by_email(db, email)
@@ -142,10 +148,16 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         activate_user(db, user.id)
 
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account is disabled")
+        return RedirectResponse(f"{frontend_url}/login?error=disabled")
 
     access_token = create_access_token(str(user.id))
     refresh_token = create_refresh_token_str()
     crud.create_refresh_token(db, user.id, refresh_token,
                               datetime.utcnow() + timedelta(days=30))
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+    # Redirect to frontend — it reads tokens from URL params and saves to localStorage
+    return RedirectResponse(
+        f"{frontend_url}/auth/callback"
+        f"?access_token={access_token}"
+        f"&refresh_token={refresh_token}"
+    )

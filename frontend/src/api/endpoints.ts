@@ -45,7 +45,7 @@ export const settingsApi = {
 
 // Problems
 export const problemsApi = {
-  list: (params?: { skip?: number; limit?: number; difficulty?: string }) =>
+  list: (params?: { skip?: number; limit?: number; difficulty?: string; topic?: string; difficulty_code?: string }) =>
     api.get<ProblemShort[]>('/problems/', { params }).then(r => r.data),
   get: (slug: string) => api.get<Problem>(`/problems/${slug}`).then(r => r.data),
   create: (data: Partial<Problem>) =>
@@ -53,6 +53,17 @@ export const problemsApi = {
   update: (id: string, data: Partial<Problem>) =>
     api.patch<Problem>(`/problems/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/problems/${id}`),
+};
+
+// Test Cases
+export const testCasesApi = {
+  forProblem: (problemId: string) =>
+    api.get(`/test-cases/problem/${problemId}/all`).then(r => r.data),
+  create: (data: { problem_id: string; input_data: string; expected_output: string; is_sample?: boolean; order_num?: number; score?: number }) =>
+    api.post(`/test-cases/`, data).then(r => r.data),
+  update: (id: string, data: Partial<{ input_data: string; expected_output: string; is_sample: boolean; order_num: number; score: number }>) =>
+    api.patch(`/test-cases/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/test-cases/${id}`),
 };
 
 // Tags

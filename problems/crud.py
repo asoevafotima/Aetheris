@@ -38,11 +38,22 @@ def get_all_problems(
 ):
     from problem_tag_map.models import ProblemTagMap
     from problem_tags.models import ProblemTag
+    from contest_problems.models import ContestProblem
+    from contests.models import Contest, ContestStatus
+
+    # Problems linked to currently running contests are hidden (like Codeforces)
+    running_contest_problem_ids = (
+        db.query(ContestProblem.problem_id)
+        .join(Contest, Contest.id == ContestProblem.contest_id)
+        .filter(Contest.status == ContestStatus.running)
+        .subquery()
+    )
 
     query = (
         db.query(Problem)
         .options(joinedload(Problem.tag_map))
         .filter(Problem.is_public == True)
+        .filter(~Problem.id.in_(running_contest_problem_ids))
     )
     if difficulty:
         query = query.filter(Problem.difficulty == difficulty)

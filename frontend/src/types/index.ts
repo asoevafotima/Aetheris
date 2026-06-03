@@ -39,6 +39,8 @@ export interface Problem {
   output_format: string;
   constraints: string;
   difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+  difficulty_code?: string;
+  topic?: string;
   status: 'draft' | 'published' | 'archived';
   time_limit_ms: number;
   memory_limit_mb: number;
@@ -55,6 +57,8 @@ export interface ProblemShort {
   title: string;
   slug: string;
   difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+  difficulty_code?: string;
+  topic?: string;
   solve_count: number;
   rating: number;
 }

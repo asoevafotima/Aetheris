@@ -136,7 +136,9 @@ def _ai_analyze_error(
                     "role": "system",
                     "content": (
                         "Ты помощник по спортивному программированию. "
-                        "Объясняй ошибки просто и понятно. "
+                        "Объясняй ошибки просто и понятно ТОЛЬКО словами. "
+                        "КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать, показывать или предлагать любой код — "
+                        "ни исправленный, ни примерный, ни фрагменты. "
                         "ОБЯЗАТЕЛЬНО отвечай ТОЛЬКО на русском языке."
                     ),
                 },
@@ -251,6 +253,8 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
             _save_ai_hint(db, sub, final_status.value, first_error or "",
                           problem, passed_count, len(test_cases))
 
+        _update_contest_standings(db, sub)
+
     except Exception as exc:
         try:
             from submissions.crud import update_submission_status
@@ -261,6 +265,55 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
             pass
     finally:
         db.close()
+
+
+def _update_contest_standings(db, sub):
+    """Recalculate ICPC-style standings for the contest after any submission result."""
+    if not sub.contest_id:
+        return
+    try:
+        from contests.crud import get_contest_by_id
+        from contest_standings.crud import upsert_standing, update_ranks
+        from submissions.models import Submission, SubmissionStatus
+
+        contest = get_contest_by_id(db, sub.contest_id)
+        if not contest:
+            return
+
+        finished_statuses = [
+            SubmissionStatus.accepted, SubmissionStatus.wrong_answer,
+            SubmissionStatus.time_limit, SubmissionStatus.runtime_error,
+            SubmissionStatus.compile_error,
+        ]
+        all_subs = db.query(Submission).filter(
+            Submission.contest_id == sub.contest_id,
+            Submission.user_id == sub.user_id,
+            Submission.status.in_(finished_statuses),
+        ).order_by(Submission.created_at).all()
+
+        # ICPC scoring: score = problems solved, penalty = sum(minutes_from_start + 20*wrong_before_ac)
+        solved = {}      # problem_id -> accepted Submission
+        wrong_count = {} # problem_id -> wrong attempt count before first accept
+
+        for s in all_subs:
+            pid = str(s.problem_id)
+            if pid in solved:
+                continue
+            if s.status == SubmissionStatus.accepted:
+                solved[pid] = s
+            else:
+                wrong_count[pid] = wrong_count.get(pid, 0) + 1
+
+        score = len(solved)
+        penalty = 0
+        for pid, acc_sub in solved.items():
+            delta_min = int((acc_sub.created_at - contest.starts_at).total_seconds() / 60)
+            penalty += max(0, delta_min) + 20 * wrong_count.get(pid, 0)
+
+        upsert_standing(db, sub.contest_id, sub.user_id, score, penalty)
+        update_ranks(db, sub.contest_id)
+    except Exception:
+        pass
 
 
 def _save_ai_hint(db, sub, status: str, error_message: str, problem, passed_count: int, total_count: int):
