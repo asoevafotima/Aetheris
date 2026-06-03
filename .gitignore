@@ -2,8 +2,7 @@
 __pycache__
 database.db
 CLAUDE.md
-requirements.txt
 .claude
 .env
-sqllite3
-как
+*.pyc
+*.pyo
