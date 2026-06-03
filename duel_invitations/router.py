@@ -22,15 +22,26 @@ def my_invitations(db: Session = Depends(get_db),
 @router.post("/{inv_id}/accept", response_model=schemas.DuelInvitationResponse)
 def accept(inv_id: UUID, db: Session = Depends(get_db),
            current_user: User = Depends(get_current_user)):
-    inv = crud.update_invitation_status(db, inv_id, InvitationStatus.accepted)
+    inv = crud.get_invitation_by_id(db, inv_id)
     if not inv:
         raise HTTPException(status_code=404, detail="Invitation not found")
+    if str(inv.to_user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not your invitation")
+    if inv.status != InvitationStatus.pending:
+        raise HTTPException(status_code=400, detail="Invitation already processed")
+
+    # Запускаем дуэль
+    from duels.crud import start_duel
+    start_duel(db, inv.duel_id, current_user.id)
+
+    inv = crud.update_invitation_status(db, inv_id, InvitationStatus.accepted)
     return inv
 
 @router.post("/{inv_id}/decline", response_model=schemas.DuelInvitationResponse)
 def decline(inv_id: UUID, db: Session = Depends(get_db),
             current_user: User = Depends(get_current_user)):
-    inv = crud.update_invitation_status(db, inv_id, InvitationStatus.declined)
+    inv = crud.get_invitation_by_id(db, inv_id)
     if not inv:
         raise HTTPException(status_code=404, detail="Invitation not found")
+    inv = crud.update_invitation_status(db, inv_id, InvitationStatus.declined)
     return inv

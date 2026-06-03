@@ -16,16 +16,7 @@ export const authApi = {
     api.post('/auth/logout', { refresh_token }),
 };
 
-// Users
-export const usersApi = {
-  me: () => api.get<User>('/users/me').then(r => r.data),
-  getById: (id: string) => api.get<User>(`/users/${id}`).then(r => r.data),
-  list: (skip = 0, limit = 50) =>
-    api.get<User[]>('/users/', { params: { skip, limit } }).then(r => r.data),
-  updateMe: (data: Partial<User>) =>
-    api.patch<User>('/users/me', data).then(r => r.data),
-  deleteMe: () => api.delete('/users/me'),
-};
+// Users (see also extended usersApi below near duels)
 
 // Profiles
 export const profilesApi = {
@@ -116,19 +107,32 @@ export const contestsApi = {
 
 // Duels
 export const duelsApi = {
-  create: (data: { problem_id: string; time_limit_minutes?: number }) =>
+  create: (data: { difficulty: string; is_rated?: boolean }) =>
     api.post<Duel>('/duels/', data).then(r => r.data),
   listActive: (skip = 0, limit = 20) =>
     api.get<Duel[]>('/duels/active', { params: { skip, limit } }).then(r => r.data),
   mine: (skip = 0, limit = 20) =>
     api.get<Duel[]>('/duels/me', { params: { skip, limit } }).then(r => r.data),
   get: (id: string) => api.get<Duel>(`/duels/${id}`).then(r => r.data),
-  accept: (id: string) => api.post<Duel>(`/duels/${id}/accept`).then(r => r.data),
   cancel: (id: string) => api.post(`/duels/${id}/cancel`),
   invitations: () => api.get('/duel-invitations/me').then(r => r.data),
-  invite: (data: object) => api.post('/duel-invitations/', data).then(r => r.data),
+  invite: (data: { duel_id: string; to_user_id: string }) =>
+    api.post('/duel-invitations/', data).then(r => r.data),
   acceptInvite: (id: string) => api.post(`/duel-invitations/${id}/accept`).then(r => r.data),
   declineInvite: (id: string) => api.post(`/duel-invitations/${id}/decline`).then(r => r.data),
+};
+
+// Users search
+export const usersApi = {
+  me: () => api.get<User>('/users/me').then(r => r.data),
+  getById: (id: string) => api.get<User>(`/users/${id}`).then(r => r.data),
+  list: (skip = 0, limit = 50) =>
+    api.get<User[]>('/users/', { params: { skip, limit } }).then(r => r.data),
+  search: (q: string) =>
+    api.get<User[]>('/users/', { params: { search: q, limit: 10 } }).then(r => r.data),
+  updateMe: (data: Partial<User>) =>
+    api.patch<User>('/users/me', data).then(r => r.data),
+  deleteMe: () => api.delete('/users/me'),
 };
 
 // Teams

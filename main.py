@@ -7,6 +7,36 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def _run_migrations():
+    """Add missing columns to existing tables (safe, idempotent)."""
+    from sqlalchemy import text, inspect
+    with engine.connect() as conn:
+        insp = inspect(engine)
+
+        # duels — new columns added in v2
+        duel_cols = {c['name'] for c in insp.get_columns('duels')}
+        migrations = [
+            ("difficulty",           "ALTER TABLE duels ADD COLUMN difficulty VARCHAR(20) NOT NULL DEFAULT 'easy'"),
+            ("challenger_solved_at", "ALTER TABLE duels ADD COLUMN challenger_solved_at DATETIME"),
+            ("opponent_solved_at",   "ALTER TABLE duels ADD COLUMN opponent_solved_at DATETIME"),
+            ("challenger_score",     "ALTER TABLE duels ADD COLUMN challenger_score FLOAT NOT NULL DEFAULT 0.0"),
+            ("opponent_score",       "ALTER TABLE duels ADD COLUMN opponent_score FLOAT NOT NULL DEFAULT 0.0"),
+        ]
+        for col, sql in migrations:
+            if col not in duel_cols:
+                conn.execute(text(sql))
+
+        # problems — difficulty_code and topic columns
+        prob_cols = {c['name'] for c in insp.get_columns('problems')}
+        if 'difficulty_code' not in prob_cols:
+            conn.execute(text("ALTER TABLE problems ADD COLUMN difficulty_code VARCHAR(10)"))
+        if 'topic' not in prob_cols:
+            conn.execute(text("ALTER TABLE problems ADD COLUMN topic VARCHAR(100)"))
+
+        conn.commit()
+
+_run_migrations()
+
 from auth.router import router as auth_router
 from users.router import router as users_router
 from user_profiles.router import router as user_profiles_router

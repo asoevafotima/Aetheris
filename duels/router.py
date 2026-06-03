@@ -29,14 +29,6 @@ def get_duel(duel_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Duel not found")
     return duel
 
-@router.post("/{duel_id}/accept", response_model=schemas.DuelResponse)
-def accept_duel(duel_id: UUID, db: Session = Depends(get_db),
-                current_user: User = Depends(get_current_user)):
-    duel = crud.accept_duel(db, duel_id, current_user.id)
-    if not duel:
-        raise HTTPException(status_code=404, detail="Duel not found")
-    return duel
-
 @router.post("/{duel_id}/cancel", status_code=204)
 def cancel_duel(duel_id: UUID, db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)):

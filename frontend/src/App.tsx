@@ -14,6 +14,8 @@ import { ProblemDetail }  from './pages/ProblemDetail';
 import { Contests }       from './pages/Contests';
 import { ContestDetail }  from './pages/ContestDetail';
 import { Duels }          from './pages/Duels';
+import { DuelDetail }     from './pages/DuelDetail';
+import { Friends }        from './pages/Friends';
 import { Teams }          from './pages/Teams';
 import { AIMentor }       from './pages/AIMentor';
 import { Visualizations } from './pages/Visualizations';
@@ -77,6 +79,8 @@ export default function App() {
               <Route path="/contests"        element={<Contests />} />
               <Route path="/contests/:slug"  element={<ContestDetail />} />
               <Route path="/duels"           element={<Duels />} />
+              <Route path="/duels/:id"       element={<DuelDetail />} />
+              <Route path="/friends"         element={<Friends />} />
               <Route path="/teams"           element={<Teams />} />
               <Route path="/teams/:slug"     element={<Teams />} />
               <Route path="/ai-mentor"       element={<AIMentor />} />

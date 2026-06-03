@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Code2, Trophy, Swords, Users, Bot, BarChart2,
   User, Settings, LogOut, Zap, BookOpen, Bell, ChevronLeft, ChevronRight,
-  ShieldCheck,
+  ShieldCheck, UserPlus,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
@@ -12,6 +12,7 @@ const NAV = [
   { to: '/problems',       icon: Code2,            label: 'Задачи'          },
   { to: '/contests',       icon: Trophy,           label: 'Контесты'        },
   { to: '/duels',          icon: Swords,           label: 'Дуэли'           },
+  { to: '/friends',        icon: UserPlus,         label: 'Друзья'          },
   { to: '/teams',          icon: Users,            label: 'Команды'         },
   { to: '/ai-mentor',      icon: Bot,              label: 'AI Наставник'    },
   { to: '/visualizations', icon: BarChart2,        label: 'Визуализации'    },

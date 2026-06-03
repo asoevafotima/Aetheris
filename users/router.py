@@ -20,7 +20,13 @@ def get_user(user_id: UUID, db: Session = Depends(get_db)):
     return user
 
 @router.get("/", response_model=list[schemas.UserShortResponse])
-def list_users(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
+def list_users(skip: int = 0, limit: int = 20, search: str = None, db: Session = Depends(get_db)):
+    if search:
+        from users.models import User as UserModel
+        return db.query(UserModel).filter(
+            UserModel.username.ilike(f"%{search}%"),
+            UserModel.is_active == True,
+        ).limit(10).all()
     return crud.get_all_users(db, skip, limit)
 
 @router.patch("/me", response_model=schemas.UserResponse)

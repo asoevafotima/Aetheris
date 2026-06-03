@@ -1,10 +1,11 @@
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { MapPin, Globe, Code2, CheckCircle, Calendar, TrendingUp, Award, ExternalLink } from 'lucide-react';
-import { usersApi, profilesApi, submissionsApi, achievementsApi, ratingsApi } from '../api/endpoints';
+import { MapPin, Globe, Code2, CheckCircle, Calendar, TrendingUp, Award, ExternalLink, UserPlus, UserCheck } from 'lucide-react';
+import { usersApi, profilesApi, submissionsApi, achievementsApi, ratingsApi, followsApi } from '../api/endpoints';
 import { Card, CardBody } from '../components/ui/Card';
 import { StatusBadge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
 import { PageLoader } from '../components/ui/Spinner';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -30,6 +31,7 @@ function StatBox({ value, label, icon: Icon, color }: { value: string | number; 
 export function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const { user: me } = useAuthStore();
+  const qc = useQueryClient();
   const targetId = userId ?? me?.id;
 
   const { data: user, isLoading } = useQuery({ queryKey: ['user', targetId], queryFn: () => usersApi.getById(targetId!), enabled: !!targetId });
@@ -37,6 +39,14 @@ export function Profile() {
   const { data: submissions }     = useQuery({ queryKey: ['submissions', 'user', targetId], queryFn: () => submissionsApi.me(0, 10), enabled: targetId === me?.id });
   const { data: userAchievements }= useQuery({ queryKey: ['achievements', 'user', targetId], queryFn: () => achievementsApi.user(targetId!), enabled: !!targetId });
   const { data: ratings }         = useQuery({ queryKey: ['ratings', targetId], queryFn: () => ratingsApi.user(targetId!, 0, 10), enabled: !!targetId });
+  const { data: following }       = useQuery({ queryKey: ['following'], queryFn: followsApi.following, enabled: !!me });
+
+  const isFollowing = (following ?? []).some((f: { following_id: string }) => f.following_id === targetId);
+
+  const followMut = useMutation({
+    mutationFn: () => isFollowing ? followsApi.unfollow(targetId!) : followsApi.follow(targetId!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['following'] }),
+  });
 
   if (isLoading) return <PageLoader />;
   if (!user)     return <div className="p-10 text-center text-slate-500">Пользователь не найден</div>;
@@ -73,6 +83,17 @@ export function Profile() {
                     {roleInfo.label}
                   </span>
                   {isMe && <span className="px-2 py-0.5 rounded-lg bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold">Это вы</span>}
+                  {!isMe && me && (
+                    <Button
+                      size="sm"
+                      variant={isFollowing ? 'outline' : 'primary'}
+                      icon={isFollowing ? <UserCheck size={13} /> : <UserPlus size={13} />}
+                      onClick={() => followMut.mutate()}
+                      loading={followMut.isPending}
+                    >
+                      {isFollowing ? 'Вы друзья' : 'Добавить в друзья'}
+                    </Button>
+                  )}
                 </div>
 
                 {profile?.first_name && (

@@ -254,6 +254,7 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
                           problem, passed_count, len(test_cases))
 
         _update_contest_standings(db, sub)
+        _update_duel(db, sub, final_status, score_pct)
 
     except Exception as exc:
         try:
@@ -265,6 +266,27 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
             pass
     finally:
         db.close()
+
+
+def _update_duel(db, sub, final_status, score_pct: float):
+    """Update duel state after a submission is judged."""
+    if not sub.contest_id:
+        return
+    try:
+        from duels.models import Duel, DuelStatus
+        from submissions.models import SubmissionStatus
+        duel = db.query(Duel).filter(
+            Duel.problem_id == sub.problem_id,
+            Duel.status == DuelStatus.active,
+            (Duel.challenger_id == sub.user_id) | (Duel.opponent_id == sub.user_id),
+        ).first()
+        if not duel:
+            return
+        solved = (final_status == SubmissionStatus.accepted)
+        from duels.crud import record_submission
+        record_submission(db, duel.id, sub.user_id, solved, score_pct)
+    except Exception:
+        pass
 
 
 def _update_contest_standings(db, sub):

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Boolean, DateTime, Integer, Enum, ForeignKey
+from sqlalchemy import Column, Boolean, DateTime, Integer, Float, String, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid, enum
@@ -22,18 +22,24 @@ class Duel(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     challenger_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     opponent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    problem_id = Column(UUID(as_uuid=True), ForeignKey("problems.id"), nullable=False)
+    problem_id = Column(UUID(as_uuid=True), ForeignKey("problems.id"), nullable=True)
+    difficulty = Column(String(20), nullable=False, default="easy")
     status = Column(Enum(DuelStatus), default=DuelStatus.pending)
     result = Column(Enum(DuelResult), nullable=True)
-    time_limit_minutes = Column(Integer, default=30)
+    time_limit_minutes = Column(Integer, default=15)
     is_rated = Column(Boolean, default=True)
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Результаты
+    challenger_solved_at = Column(DateTime, nullable=True)
+    opponent_solved_at = Column(DateTime, nullable=True)
+    challenger_score = Column(Float, default=0.0)
+    opponent_score = Column(Float, default=0.0)
 
     challenger = relationship("User", foreign_keys=[challenger_id])
     opponent = relationship("User", foreign_keys=[opponent_id])
     problem = relationship("Problem")
     invitations = relationship("DuelInvitation", back_populates="duel", cascade="all, delete-orphan")
     duel_rating = relationship("DuelRating", back_populates="duel", cascade="all, delete-orphan")
-    

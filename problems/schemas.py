@@ -37,6 +37,7 @@ class ProblemCreate(BaseModel):
     time_limit_ms: int = 2000
     memory_limit_mb: int = 256
     is_public: bool = True
+    status: ProblemStatus = ProblemStatus.published
 
     @field_validator("difficulty_code")
     @classmethod

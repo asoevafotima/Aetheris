@@ -115,14 +115,24 @@ export interface ContestStanding {
 export interface Duel {
   id: string;
   challenger_id: string;
+  challenger_username?: string;
   opponent_id?: string;
-  problem_id: string;
+  opponent_username?: string;
+  problem_id?: string;
+  problem_title?: string;
+  problem_slug?: string;
+  difficulty: string;
   status: 'pending' | 'active' | 'finished' | 'cancelled';
-  winner_id?: string;
-  starts_at?: string;
-  ends_at?: string;
+  result?: 'challenger_win' | 'opponent_win' | 'draw';
   time_limit_minutes: number;
+  is_rated: boolean;
+  started_at?: string;
+  finished_at?: string;
   created_at: string;
+  challenger_solved_at?: string;
+  opponent_solved_at?: string;
+  challenger_score: number;
+  opponent_score: number;
 }
 
 export interface Team {
