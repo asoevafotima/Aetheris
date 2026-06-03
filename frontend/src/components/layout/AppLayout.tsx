@@ -1,11 +1,11 @@
 import { Outlet } from 'react-router-dom';
-import { TopNav } from './TopNav';
+import { Sidebar } from './Sidebar';
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen surface-transition" style={{ background: 'var(--bg)' }}>
-      <TopNav />
-      <main className="max-w-screen-2xl mx-auto">
+    <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
+      <Sidebar />
+      <main className="flex-1 min-w-0 overflow-auto">
         <Outlet />
       </main>
     </div>

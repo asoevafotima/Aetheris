@@ -15,7 +15,7 @@
       (function(){
         try{
           var s=JSON.parse(localStorage.getItem('aetheris-theme')||'{}');
-          var t=(s&&s.state&&s.state.theme)||'light';
+          var t=(s&&s.state&&s.state.theme)||'dark';
           document.documentElement.classList.add(t==='dark'?'dark':'light');
         }catch(e){
           document.documentElement.classList.add('light');

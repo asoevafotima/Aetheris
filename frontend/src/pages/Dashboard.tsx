@@ -1,10 +1,11 @@
 import { Component, useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { motion, useMotionValue, useTransform, AnimatePresence, animate } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
 import {
-  Code2, Trophy, Swords, TrendingUp, CheckCircle,
-  Clock, ArrowRight, AlertCircle, RefreshCw, Zap, Bot,
+  Code2, Trophy, Swords, TrendingUp, CheckCircle2,
+  Clock, ArrowUpRight, AlertCircle, RefreshCw,
+  Zap, Bot, Flame, Target,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { submissionsApi, contestsApi, ratingsApi, problemsApi } from '../api/endpoints';
@@ -14,102 +15,72 @@ import { SkeletonLine } from '../components/ui/Spinner';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-/* ── Error boundary ── */
-class ErrBound extends Component<{children:ReactNode},{err:boolean;msg:string}> {
-  constructor(p:{children:ReactNode}) { super(p); this.state={err:false,msg:''}; }
-  static getDerivedStateFromError(e:Error) { return {err:true,msg:e.message}; }
+class ErrBound extends Component<{ children: ReactNode }, { err: boolean; msg: string }> {
+  constructor(p: { children: ReactNode }) { super(p); this.state = { err: false, msg: '' }; }
+  static getDerivedStateFromError(e: Error) { return { err: true, msg: e.message }; }
   render() {
     if (!this.state.err) return this.props.children;
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)'}}>
-          <AlertCircle size={28} className="text-red-400" />
-        </div>
-        <p className="text-[var(--t1)] font-semibold">Ошибка загрузки</p>
-        <p className="text-red-400 text-xs font-mono px-4 py-2 rounded-xl" style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.15)'}}>{this.state.msg}</p>
-        <Button icon={<RefreshCw size={13}/>} onClick={()=>this.setState({err:false,msg:''})}>Retry</Button>
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <AlertCircle size={40} className="text-red-400" />
+        <Button icon={<RefreshCw size={13} />} onClick={() => this.setState({ err: false, msg: '' })}>Retry</Button>
       </div>
     );
   }
 }
 
-/* ── CountUp ── */
-function CountUp({to,delay=0,prefix='',suffix=''}:{to:number;delay?:number;prefix?:string;suffix?:string}) {
-  const count   = useMotionValue(0);
-  const display = useTransform(count, v => `${prefix}${Math.round(v).toLocaleString()}${suffix}`);
+function CountUp({ to, delay = 0 }: { to: number; delay?: number }) {
+  const v = useMotionValue(0);
+  const d = useTransform(v, n => Math.round(n).toLocaleString());
   useEffect(() => {
-    const t = setTimeout(()=>{
-      animate(count, to, {duration:1.4, ease:'easeOut'});
-    }, delay);
-    return ()=>clearTimeout(t);
+    const t = setTimeout(() => animate(v, to, { duration: 1.4, ease: 'easeOut' }), delay);
+    return () => clearTimeout(t);
   }, [to]);
-  return <motion.span className="tabular-nums">{display}</motion.span>;
+  return <motion.span>{d}</motion.span>;
 }
 
-/* ── Contribution graph ── */
-function ContribGraph({submissions}:{submissions?:{created_at?:string}[]}) {
+function ContribGraph({ submissions }: { submissions?: { created_at?: string; status?: string }[] }) {
   const active = new Set<string>();
-  (submissions??[]).forEach(s=>{
-    if(s.created_at) try{ active.add(new Date(s.created_at).toISOString().split('T')[0]); }catch{}
+  (submissions ?? []).forEach(s => {
+    if (s.created_at) try { active.add(new Date(s.created_at).toISOString().split('T')[0]); } catch { /* */ }
   });
-
-  const today = new Date();
-  const weeks: {date:string;level:number}[][] = [];
-  const start = new Date(today);
-  start.setDate(start.getDate() - 52*7 + 1);
-
-  for(let w=0;w<52;w++){
-    const wk:typeof weeks[0]=[];
-    for(let d=0;d<7;d++){
-      const dt = new Date(start);
-      dt.setDate(start.getDate()+w*7+d);
+  const weeks: { date: string; level: number }[][] = [];
+  const start = new Date(); start.setDate(start.getDate() - 52 * 7 + 1);
+  for (let w = 0; w < 52; w++) {
+    const wk: typeof weeks[0] = [];
+    for (let d2 = 0; d2 < 7; d2++) {
+      const dt = new Date(start); dt.setDate(start.getDate() + w * 7 + d2);
       const key = dt.toISOString().split('T')[0];
-      const isActive = active.has(key);
-      const seed = (dt.getDate()*7+dt.getMonth()*31)%5;
-      wk.push({date:key, level: isActive ? Math.max(2,seed) : (seed>3?1:0)});
+      const seed = (dt.getDate() * 7 + dt.getMonth() * 31) % 5;
+      wk.push({ date: key, level: active.has(key) ? Math.max(2, seed) : seed > 3 ? 1 : 0 });
     }
     weeks.push(wk);
   }
-
-  const MN=['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
-  const labels:{l:string;c:number}[]=[];
-  let last=-1;
-  weeks.forEach((wk,wi)=>{
-    const m=new Date(wk[0].date).getMonth();
-    if(m!==last){labels.push({l:MN[m],c:wi});last=m;}
-  });
-
+  const MN = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  const labels: { l: string; c: number }[] = []; let last = -1;
+  weeks.forEach((wk, wi) => { const m = new Date(wk[0].date).getMonth(); if (m !== last) { labels.push({ l: MN[m], c: wi }); last = m; } });
   return (
     <div className="overflow-x-auto">
-      <div className="inline-block min-w-full">
+      <div className="inline-block">
         <div className="flex gap-[3px] mb-1 ml-5">
-          {weeks.map((_,wi)=>{
-            const lb=labels.find(l=>l.c===wi);
-            return <div key={wi} className="w-[11px] text-[8px] shrink-0" style={{color:'var(--t3)'}}>{lb?.l??''}</div>;
-          })}
+          {weeks.map((_, wi) => { const lb = labels.find(l => l.c === wi); return <div key={wi} className="w-[11px] text-[8px] shrink-0" style={{ color: 'var(--t3)' }}>{lb?.l ?? ''}</div>; })}
         </div>
         <div className="flex gap-[3px]">
           <div className="flex flex-col gap-[3px] mr-1.5">
-            {['Пн','','Ср','','Пт','','Вс'].map((d,i)=>(
-              <div key={i} className="h-[11px] text-[8px] leading-[11px] w-[14px] text-right" style={{color:'var(--t3)'}}>{d}</div>
-            ))}
+            {['Пн','','Ср','','Пт','','Вс'].map((d3, i) => <div key={i} className="h-[11px] text-[8px] leading-[11px] w-[14px] text-right" style={{ color: 'var(--t3)' }}>{d3}</div>)}
           </div>
-          {weeks.map((wk,wi)=>(
+          {weeks.map((wk, wi) => (
             <div key={wi} className="flex flex-col gap-[3px]">
-              {wk.map(({date,level})=>(
-                <motion.div key={date}
-                  whileHover={{scale:1.5,zIndex:10}}
-                  transition={{duration:0.1}}
-                  className={`cg-cell cg-${level}`}
-                  title={date}
-                />
+              {wk.map(({ date, level }) => (
+                <motion.div key={date} whileHover={{ scale: 1.5 }} transition={{ duration: 0.1 }}
+                  className={`cg-cell cg-${level}`} title={date} />
               ))}
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-1.5 mt-2 ml-5 text-[8px]" style={{color:'var(--t3)'}}>
+        <div className="flex items-center gap-1.5 mt-2 ml-5 text-[8px]" style={{ color: 'var(--t3)' }}>
           <span>Меньше</span>
-          {[0,1,2,3,4].map(l=><div key={l} className={`cg-cell cg-${l} shrink-0`}/>)}
+          {[0,1,2,3,4].map(l => <div key={l} className={`cg-cell cg-${l} shrink-0`} />)}
           <span>Больше</span>
         </div>
       </div>
@@ -117,242 +88,264 @@ function ContribGraph({submissions}:{submissions?:{created_at?:string}[]}) {
   );
 }
 
-/* ── Stat Card ── */
-function StatCard({value,label,icon:Icon,g,delay}:{value:number;label:string;icon:React.ElementType;g:string;delay:number}) {
-  return (
-    <motion.div
-      initial={{opacity:0,y:24}}
-      animate={{opacity:1,y:0}}
-      transition={{delay,duration:0.5,ease:[0.16,1,0.3,1]}}
-      whileHover={{y:-3,transition:{duration:0.2}}}
-      className="relative p-5 rounded-2xl overflow-hidden cursor-default"
-      style={{background:'var(--s0)', border:'1px solid var(--b0)', boxShadow:'var(--sh)'}}
-    >
-      {/* Hover glow */}
-      <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500"
-        style={{background:'radial-gradient(circle at 50% 120%,rgba(99,102,241,0.07) 0%,transparent 70%)'}}/>
-      <div className="absolute top-0 left-0 right-0 h-px opacity-0 hover:opacity-100 transition-opacity duration-300"
-        style={{background:'linear-gradient(90deg,transparent,rgba(129,140,248,0.4),transparent)'}}/>
-      <div className="relative flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${g} shadow-xl shrink-0`}>
-          <Icon size={20} className="text-white"/>
-        </div>
-        <div>
-          <div className="text-[22px] font-black tracking-tight text-[var(--t1)]">
-            <CountUp to={value} delay={delay*1000+400}/>
-          </div>
-          <div className="text-xs text-[var(--t3)] mt-0.5">{label}</div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+const CARD_VARIANTS = {
+  hidden: { opacity: 0, y: 24 },
+  show: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.07, duration: 0.5, ease: 'easeOut' as const } }),
+};
 
-/* ── Inner ── */
 function Inner() {
-  const {user}=useAuthStore();
-  const {data:submissions,isLoading:sl,isError:se}=useQuery({queryKey:['submissions','me'],queryFn:()=>submissionsApi.me(0,20),retry:false});
-  const {data:contests,isLoading:cl}=useQuery({queryKey:['contests','upcoming'],queryFn:()=>contestsApi.list({limit:3}),retry:false});
-  const {data:ratings}=useQuery({queryKey:['ratings','me'],queryFn:()=>ratingsApi.me(0,10),retry:false});
-  const {data:problems,isLoading:pl}=useQuery({queryKey:['problems','list'],queryFn:()=>problemsApi.list({limit:5}),retry:false});
+  const { user } = useAuthStore();
+  const { data: subs, isLoading: sl, isError: se } = useQuery({ queryKey: ['submissions','me'], queryFn: () => submissionsApi.me(0, 20), retry: false });
+  const { data: contests } = useQuery({ queryKey: ['contests','upcoming'], queryFn: () => contestsApi.list({ limit: 4 }), retry: false });
+  const { data: ratings } = useQuery({ queryKey: ['ratings','me'], queryFn: () => ratingsApi.me(0, 10), retry: false });
+  const { data: problems } = useQuery({ queryKey: ['problems','list'], queryFn: () => problemsApi.list({ limit: 5 }), retry: false });
 
-  const accepted=submissions?.filter(s=>s.status==='accepted').length??0;
-  const rating=ratings?.reduce((a,r)=>a+(r.delta??0),1200)??1200;
-  const h=new Date().getHours();
-  const gr=h<12?'Доброе утро':h<18?'Добрый день':'Добрый вечер';
+  const accepted = subs?.filter(s => s.status === 'accepted').length ?? 0;
+  const rating   = ratings?.reduce((a, r) => a + (r.delta ?? 0), 1200) ?? 1200;
+  const h = new Date().getHours();
+  const greeting = h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
 
-  function fmtDate(d?:string|null){
-    if(!d)return'—';
-    try{return formatDistanceToNow(new Date(d),{addSuffix:true,locale:ru})}catch{return'—'}
+  function fmtDate(d?: string | null) {
+    if (!d) return '—';
+    try { return formatDistanceToNow(new Date(d), { addSuffix: true, locale: ru }); } catch { return '—'; }
   }
 
-  const panel = (children:ReactNode) => (
-    <div className="rounded-2xl overflow-hidden" style={{background:'var(--s0)',border:'1px solid var(--b0)',boxShadow:'var(--sh)'}}>
-      {children}
-    </div>
-  );
+  const STATS = [
+    { value: accepted,        label: 'Решено задач',  Icon: CheckCircle2, from: '#10b981', to: '#059669' },
+    { value: rating,          label: 'Рейтинг',       Icon: TrendingUp,   from: '#6366f1', to: '#8b5cf6' },
+    { value: subs?.length ?? 0, label: 'Посылок',     Icon: Code2,        from: '#06b6d4', to: '#0284c7' },
+    { value: contests?.length ?? 0, label: 'Контестов', Icon: Trophy,     from: '#f59e0b', to: '#d97706' },
+  ];
 
-  const panelHeader=(icon:ReactNode, title:string, action?:ReactNode)=>(
-    <div className="px-5 py-4 border-b flex items-center justify-between" style={{borderColor:'var(--b0)'}}>
-      <h2 className="text-[13px] font-semibold text-[var(--t1)] flex items-center gap-2">{icon}{title}</h2>
-      {action}
-    </div>
-  );
+  const QUICK = [
+    { to: '/problems',  Icon: Code2,   label: 'Решить задачу', sub: 'Новая задача',   color: '#818cf8' },
+    { to: '/duels',     Icon: Swords,  label: 'Дуэль',        sub: '1 на 1',         color: '#f87171' },
+    { to: '/contests',  Icon: Trophy,  label: 'Контесты',     sub: 'Соревнования',   color: '#fbbf24' },
+    { to: '/ai-mentor', Icon: Bot,     label: 'AI Ментор',    sub: 'Помощь AI',      color: '#22d3ee' },
+    { to: '/training',  Icon: Target,  label: 'Тренировка',   sub: 'Практика',       color: '#86efac' },
+    { to: '/leaderboard',Icon: Flame,  label: 'Рейтинг',      sub: 'Лидерборд',      color: '#fb923c' },
+  ];
 
   return (
-    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+    <div className="min-h-screen p-6 lg:p-8">
+      {/* Background accent */}
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)', zIndex: 0 }} />
 
-      {/* Header */}
-      <motion.div
-        initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}}
-        transition={{duration:0.5,ease:[0.16,1,0.3,1]}} className="mb-8"
-      >
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-[var(--t1)]">
-              {gr},{' '}
-              <span className="gradient-text">{user?.username??'...'}</span> 👋
-            </h1>
-            <p className="text-[var(--t3)] text-sm mt-1">Готов к задачам сегодня?</p>
+      <div className="relative max-w-7xl mx-auto">
+
+        {/* ── Header ── */}
+        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="mb-9">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.15em] uppercase mb-1.5" style={{ color: 'var(--t3)' }}>
+                {greeting}
+              </p>
+              <h1 className="text-4xl font-black tracking-tight" style={{ color: 'var(--t1)', letterSpacing: '-0.03em' }}>
+                {user?.username ?? '...'} 👋
+              </h1>
+              <p className="text-sm mt-1.5" style={{ color: 'var(--t3)' }}>Готов к новым достижениям?</p>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Link to="/problems"><Button variant="outline" size="sm" icon={<Code2 size={13}/>}>Задачи</Button></Link>
-            <Link to="/duels"><Button size="sm" icon={<Swords size={13}/>}>Дуэль</Button></Link>
-          </div>
+        </motion.div>
+
+        {/* ── Stats row ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {STATS.map(({ value, label, Icon, from, to: toColor }, i) => (
+            <motion.div key={label} custom={i} variants={CARD_VARIANTS} initial="hidden" animate="show"
+              className="relative rounded-2xl p-5 overflow-hidden cursor-default group"
+              style={{ background: 'var(--s0)', border: '1px solid var(--b0)' }}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+            >
+              {/* Gradient bg glow */}
+              <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-15 group-hover:opacity-25 transition-opacity blur-2xl"
+                style={{ background: `radial-gradient(circle, ${from}, ${toColor})` }} />
+              <div className="relative flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${from}, ${toColor})`, boxShadow: `0 4px 12px ${from}40` }}>
+                  <Icon size={17} className="text-white" />
+                </div>
+                <span className="text-xs font-medium" style={{ color: 'var(--t3)' }}>{label}</span>
+              </div>
+              <div className="text-3xl font-black tracking-tight" style={{ color: 'var(--t1)', letterSpacing: '-0.02em' }}>
+                <CountUp to={value} delay={i * 100 + 400} />
+              </div>
+            </motion.div>
+          ))}
         </div>
-      </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
-        <StatCard value={accepted}           label="Решено задач"  icon={CheckCircle} g="from-emerald-500 to-teal-500"  delay={0}    />
-        <StatCard value={rating}             label="Рейтинг"       icon={TrendingUp}  g="from-indigo-500 to-violet-600" delay={0.05} />
-        <StatCard value={submissions?.length??0} label="Посылок" icon={Code2}        g="from-cyan-500   to-sky-500"    delay={0.1}  />
-        <StatCard value={contests?.length??0} label="Контестов"   icon={Trophy}       g="from-amber-400  to-orange-500" delay={0.15} />
-      </div>
+        {/* ── Main grid ── */}
+        <div className="grid lg:grid-cols-[1fr_340px] gap-6">
 
-      <div className="grid lg:grid-cols-3 gap-5">
+          {/* Left */}
+          <div className="flex flex-col gap-6">
 
-        {/* Left 2-col */}
-        <motion.div
-          initial={{opacity:0,y:28}} animate={{opacity:1,y:0}}
-          transition={{delay:0.2,duration:0.5,ease:[0.16,1,0.3,1]}}
-          className="lg:col-span-2 flex flex-col gap-5"
-        >
-          {/* Submissions */}
-          {panel(
-            <>
-              {panelHeader(
-                <Clock size={14} className="text-[var(--t3)]" />, 'Последние посылки',
-                <Link to="/problems"><Button variant="ghost" size="sm" icon={<ArrowRight size={12}/>}>Все задачи</Button></Link>
-              )}
+            {/* Quick actions */}
+            <motion.div custom={4} variants={CARD_VARIANTS} initial="hidden" animate="show"
+              className="rounded-2xl overflow-hidden" style={{ background: 'var(--s0)', border: '1px solid var(--b0)' }}>
+              <div className="px-5 py-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--b0)' }}>
+                <Zap size={14} style={{ color: '#818cf8' }} />
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--t1)' }}>Быстрый старт</span>
+              </div>
+              <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {QUICK.map(({ to, Icon, label, sub, color }) => (
+                  <Link key={to} to={to}>
+                    <motion.div
+                      whileHover={{ y: -3, scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      className="flex flex-col gap-2.5 p-4 rounded-2xl cursor-pointer group"
+                      style={{ background: 'var(--s1)', border: '1px solid var(--b0)' }}
+                    >
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ background: `${color}15`, border: `1px solid ${color}25` }}>
+                        <Icon size={18} style={{ color }} />
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold" style={{ color: 'var(--t1)' }}>{label}</p>
+                        <p className="text-[11px]" style={{ color: 'var(--t3)' }}>{sub}</p>
+                      </div>
+                    </motion.div>
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Recent submissions */}
+            <motion.div custom={5} variants={CARD_VARIANTS} initial="hidden" animate="show"
+              className="rounded-2xl overflow-hidden" style={{ background: 'var(--s0)', border: '1px solid var(--b0)' }}>
+              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--b0)' }}>
+                <div className="flex items-center gap-2">
+                  <Clock size={14} style={{ color: 'var(--t3)' }} />
+                  <span className="text-[13px] font-semibold" style={{ color: 'var(--t1)' }}>Последние посылки</span>
+                </div>
+                <Link to="/problems">
+                  <button className="flex items-center gap-1 text-[12px] font-medium transition-colors cursor-pointer"
+                    style={{ color: 'var(--ac)' }}>
+                    Все задачи <ArrowUpRight size={12} />
+                  </button>
+                </Link>
+              </div>
               {sl ? (
-                <div className="p-5 flex flex-col gap-3">{[1,2,3].map(i=><SkeletonLine key={i} className="w-full h-10"/>)}</div>
-              ) : se||!submissions?.length ? (
-                <div className="py-14 text-center text-[var(--t3)]">
-                  <Code2 size={32} className="mx-auto mb-3 opacity-20"/>
+                <div className="p-5 flex flex-col gap-3">{[1,2,3].map(i => <SkeletonLine key={i} className="w-full h-12" />)}</div>
+              ) : se || !subs?.length ? (
+                <div className="py-14 text-center" style={{ color: 'var(--t3)' }}>
+                  <Code2 size={28} className="mx-auto mb-3 opacity-20" />
                   <p className="text-sm">Посылок нет. <Link to="/problems" className="text-indigo-400 hover:underline">Реши задачу!</Link></p>
                 </div>
               ) : (
-                <div className="divide-y" style={{borderColor:'var(--b0)'}}>
+                <div>
                   <AnimatePresence>
-                    {submissions.slice(0,8).map((sub,i)=>(
+                    {subs.slice(0, 7).map((sub, i) => (
                       <motion.div key={sub.id}
-                        initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}}
-                        transition={{delay:i*0.04}}
-                        className="px-5 py-3.5 flex items-center justify-between transition-colors group"
-                        style={{'--hv-bg':'var(--hv)'} as React.CSSProperties}
-                        onMouseEnter={e=>(e.currentTarget.style.background='var(--hv)')}
-                        onMouseLeave={e=>(e.currentTarget.style.background='')}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        className="flex items-center justify-between px-5 py-3.5 border-b last:border-0 transition-colors"
+                        style={{ borderColor: 'var(--b0)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--hv)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = '')}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <StatusBadge status={sub.status}/>
+                          <StatusBadge status={sub.status} />
                           <div className="min-w-0">
-                            <p className="text-[13px] font-mono text-[var(--t1)] truncate">{(sub.problem_id??sub.id??'').slice(0,8)}…</p>
-                            <p className="text-xs text-[var(--t3)]">{sub.language??'?'} · {fmtDate(sub.created_at)}</p>
+                            <p className="text-[13px] font-mono truncate" style={{ color: 'var(--t1)' }}>
+                              {(sub.problem_id ?? sub.id ?? '').slice(0, 8)}…
+                            </p>
+                            <p className="text-[11px]" style={{ color: 'var(--t3)' }}>
+                              {sub.language ?? '?'} · {fmtDate(sub.created_at)}
+                            </p>
                           </div>
                         </div>
-                        {sub.time_ms!=null && <span className="text-[11px] text-[var(--t3)] font-mono shrink-0">{sub.time_ms}мс</span>}
+                        {sub.time_ms != null && (
+                          <span className="text-[11px] font-mono shrink-0" style={{ color: 'var(--t3)' }}>{sub.time_ms}мс</span>
+                        )}
                       </motion.div>
                     ))}
                   </AnimatePresence>
                 </div>
               )}
-            </>
-          )}
+            </motion.div>
 
-          {/* Contribution graph */}
-          {panel(
-            <>
-              {panelHeader(
-                <Zap size={14} className="text-indigo-400"/>, 'Активность за год',
-                <span className="text-[11px] text-[var(--t3)]">{accepted} решено</span>
-              )}
-              <div className="p-5"><ContribGraph submissions={submissions}/></div>
-            </>
-          )}
-        </motion.div>
-
-        {/* Right column */}
-        <motion.div
-          initial={{opacity:0,y:28}} animate={{opacity:1,y:0}}
-          transition={{delay:0.3,duration:0.5,ease:[0.16,1,0.3,1]}}
-          className="flex flex-col gap-4"
-        >
-          {/* Contests */}
-          {panel(
-            <>
-              {panelHeader(<Trophy size={13} className="text-amber-400"/>, 'Контесты', <Link to="/contests"><Button variant="ghost" size="sm">Все</Button></Link>)}
-              <div className="p-4 flex flex-col gap-2">
-                {cl ? <SkeletonLine className="w-full h-14"/> :
-                 !contests?.length ? <p className="text-[var(--t3)] text-sm text-center py-5">Контестов нет</p> :
-                 contests.map(c=>(
-                  <Link key={c.id} to={`/contests/${c.slug??c.id}`}>
-                    <div className="p-3 rounded-xl transition-all cursor-pointer group"
-                      style={{background:'var(--s1)',border:'1px solid var(--b0)'}}
-                      onMouseEnter={e=>(e.currentTarget.style.borderColor='rgba(129,140,248,0.3)')}
-                      onMouseLeave={e=>(e.currentTarget.style.borderColor='var(--b0)')}>
-                      <p className="text-[13px] font-medium text-[var(--t1)] group-hover:text-indigo-400 transition-colors truncate">{c.title??'Без названия'}</p>
-                      <p className="text-[11px] text-[var(--t3)] mt-0.5 font-mono">
-                        {c.starts_at ? new Date(c.starts_at as unknown as string).toLocaleDateString('ru-RU') : '—'}
-                      </p>
-                    </div>
-                  </Link>
-                 ))}
+            {/* Contribution graph */}
+            <motion.div custom={6} variants={CARD_VARIANTS} initial="hidden" animate="show"
+              className="rounded-2xl overflow-hidden" style={{ background: 'var(--s0)', border: '1px solid var(--b0)' }}>
+              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--b0)' }}>
+                <div className="flex items-center gap-2">
+                  <Zap size={14} style={{ color: '#818cf8' }} />
+                  <span className="text-[13px] font-semibold" style={{ color: 'var(--t1)' }}>Активность за год</span>
+                </div>
+                <span className="text-[12px]" style={{ color: 'var(--t3)' }}>{accepted} решено</span>
               </div>
-            </>
-          )}
+              <div className="p-5"><ContribGraph submissions={subs} /></div>
+            </motion.div>
+          </div>
 
-          {/* Quick actions */}
-          {panel(
-            <>
-              {panelHeader(<Zap size={13} className="text-indigo-400"/>, 'Быстрый старт')}
-              <div className="p-4 flex flex-col gap-1">
-                {[
-                  {to:'/problems',  Icon:Code2,   l:'Решить задачу',  c:'text-indigo-400',  bg:'rgba(99,102,241,0.08)'},
-                  {to:'/duels',     Icon:Swords,  l:'Начать дуэль',   c:'text-red-400',     bg:'rgba(239,68,68,0.08)'},
-                  {to:'/ai-mentor', Icon:Bot,     l:'AI Наставник',   c:'text-cyan-400',    bg:'rgba(6,182,212,0.08)'},
-                  {to:'/training',  Icon:TrendingUp,l:'Тренировка',   c:'text-emerald-400', bg:'rgba(16,185,129,0.08)'},
-                ].map(({to,Icon,l,c,bg})=>(
-                  <Link key={to} to={to}>
-                    <div className="flex items-center gap-3 p-2.5 rounded-xl transition-colors group cursor-pointer"
-                      onMouseEnter={e=>(e.currentTarget.style.background='var(--hv)')}
-                      onMouseLeave={e=>(e.currentTarget.style.background='')}>
-                      <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0" style={{background:bg}}>
-                        <Icon size={13} className={c}/>
+          {/* Right */}
+          <div className="flex flex-col gap-5">
+
+            {/* Upcoming contests */}
+            <motion.div custom={7} variants={CARD_VARIANTS} initial="hidden" animate="show"
+              className="rounded-2xl overflow-hidden" style={{ background: 'var(--s0)', border: '1px solid var(--b0)' }}>
+              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--b0)' }}>
+                <div className="flex items-center gap-2">
+                  <Trophy size={14} className="text-amber-400" />
+                  <span className="text-[13px] font-semibold" style={{ color: 'var(--t1)' }}>Контесты</span>
+                </div>
+                <Link to="/contests">
+                  <button className="text-[12px] font-medium transition-colors cursor-pointer" style={{ color: 'var(--ac)' }}>Все</button>
+                </Link>
+              </div>
+              <div className="p-4 flex flex-col gap-2">
+                {!contests?.length ? (
+                  <p className="text-[13px] text-center py-5" style={{ color: 'var(--t3)' }}>Нет контестов</p>
+                ) : contests.map(c => (
+                  <Link key={c.id} to={`/contests/${c.slug ?? c.id}`}>
+                    <motion.div whileHover={{ x: 3 }} transition={{ duration: 0.15 }}
+                      className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all"
+                      style={{ background: 'var(--s1)', border: '1px solid var(--b0)' }}
+                      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(129,140,248,0.3)')}
+                      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--b0)')}>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium truncate" style={{ color: 'var(--t1)' }}>{c.title}</p>
+                        <p className="text-[11px] font-mono" style={{ color: 'var(--t3)' }}>
+                          {c.starts_at ? new Date(c.starts_at as unknown as string).toLocaleDateString('ru-RU') : '—'}
+                        </p>
                       </div>
-                      <span className="text-[13px] text-[var(--t2)] group-hover:text-[var(--t1)] transition-colors flex-1">{l}</span>
-                      <ArrowRight size={11} className="text-[var(--t3)] opacity-0 group-hover:opacity-100 transition-opacity"/>
+                      <ArrowUpRight size={14} style={{ color: 'var(--t3)' }} className="shrink-0 ml-2" />
+                    </motion.div>
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Recommended problems */}
+            <motion.div custom={8} variants={CARD_VARIANTS} initial="hidden" animate="show"
+              className="rounded-2xl overflow-hidden" style={{ background: 'var(--s0)', border: '1px solid var(--b0)' }}>
+              <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--b0)' }}>
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--t1)' }}>Рекомендуем</span>
+              </div>
+              <div className="p-4 flex flex-col gap-1.5">
+                {!problems?.length ? (
+                  <p className="text-[13px] text-center py-4" style={{ color: 'var(--t3)' }}>Задач нет</p>
+                ) : problems.slice(0, 5).map(p => (
+                  <Link key={p.id} to={`/problems/${p.slug ?? p.id}`}>
+                    <div className="flex items-center justify-between p-2.5 rounded-xl transition-colors cursor-pointer"
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--hv)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                      <p className="text-[13px] truncate flex-1 mr-2" style={{ color: 'var(--t2)' }}>{p.title}</p>
+                      <DifficultyBadge difficulty={p.difficulty ?? 'easy'} />
                     </div>
                   </Link>
                 ))}
               </div>
-            </>
-          )}
-
-          {/* Recommended */}
-          {panel(
-            <>
-              {panelHeader(null,'Рекомендуем')}
-              <div className="p-4 flex flex-col gap-1">
-                {pl ? <SkeletonLine className="w-full h-10"/> :
-                 !problems?.length ? <p className="text-[var(--t3)] text-xs text-center py-3">Нет задач</p> :
-                 problems.slice(0,4).map(p=>(
-                  <Link key={p.id} to={`/problems/${p.slug??p.id}`}>
-                    <div className="flex items-center justify-between p-2 rounded-lg transition-colors group cursor-pointer"
-                      onMouseEnter={e=>(e.currentTarget.style.background='var(--hv)')}
-                      onMouseLeave={e=>(e.currentTarget.style.background='')}>
-                      <p className="text-[13px] text-[var(--t2)] group-hover:text-[var(--t1)] transition-colors truncate flex-1 mr-2">{p.title??'Задача'}</p>
-                      <DifficultyBadge difficulty={p.difficulty??'easy'}/>
-                    </div>
-                  </Link>
-                 ))}
-              </div>
-            </>
-          )}
-        </motion.div>
+            </motion.div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-export function Dashboard() { return <ErrBound><Inner/></ErrBound>; }
+export function Dashboard() { return <ErrBound><Inner /></ErrBound>; }
