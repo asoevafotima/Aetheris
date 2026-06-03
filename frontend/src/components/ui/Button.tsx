@@ -9,17 +9,22 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary:   'bg-purple-600 hover:bg-purple-700 text-white shadow-sm border border-purple-600',
-  secondary: 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm border border-cyan-600',
-  ghost:     'bg-transparent hover:bg-[var(--hover)] text-[var(--text-2)] hover:text-[var(--text-1)] border border-transparent',
-  danger:    'bg-red-600 hover:bg-red-700 text-white border border-red-600',
-  outline:   'bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text-1)] border border-[var(--border)] hover:border-[var(--border-2)] shadow-sm',
+  primary:
+    'btn-primary-glow text-white font-semibold',
+  secondary:
+    'bg-gradient-to-r from-cyan-600 to-sky-600 hover:from-cyan-500 hover:to-sky-500 text-white border border-cyan-500/30 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-all duration-200',
+  ghost:
+    'bg-transparent hover:bg-[var(--hover)] text-[var(--text-2)] hover:text-[var(--text-1)] border border-transparent hover:border-[var(--border)]',
+  danger:
+    'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white border border-red-500/30 shadow-lg shadow-red-500/20 hover:shadow-red-500/40 transition-all duration-200',
+  outline:
+    'btn-outline-glow font-medium',
 };
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-sm gap-1.5',
-  md: 'px-4 py-2 text-sm gap-2',
-  lg: 'px-6 py-3 text-base gap-2',
+  sm: 'px-3 py-1.5 text-xs gap-1.5 rounded-lg',
+  md: 'px-4 py-2   text-sm gap-2   rounded-[10px]',
+  lg: 'px-6 py-3   text-sm gap-2   rounded-xl',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -27,10 +32,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center rounded-lg font-medium transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none select-none ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
-      {loading ? <Loader2 size={16} className="animate-spin" /> : icon}
+      {loading ? <Loader2 size={14} className="animate-spin" /> : icon}
       {children}
     </button>
   )

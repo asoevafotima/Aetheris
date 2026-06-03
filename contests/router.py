@@ -1,15 +1,34 @@
 from uuid import UUID
+import asyncio
+import json
+import uuid as _uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
+
 from database import get_db
 from . import crud, schemas
 from auth.router import get_current_user, require_role, decode_access_token
 from users.models import User
 from websocket_manager import manager
 from contest_standings.crud import get_standings_by_contest
-import uuid, json
 
 router = APIRouter(prefix="/contests", tags=["contests"])
+
+
+def _standings_rows(standings) -> list:
+    return [
+        {
+            "id": str(s.id),
+            "user_id": str(s.user_id),
+            "contest_id": str(s.contest_id),
+            "username": s.user.username if s.user else None,
+            "score": s.score,
+            "penalty": s.penalty,
+            "rank": s.rank,
+        }
+        for s in standings
+    ]
 
 
 @router.get("/", response_model=list[schemas.ContestResponse])
@@ -47,36 +66,28 @@ def delete_contest(contest_id: UUID, db: Session = Depends(get_db),
     crud.delete_contest(db, contest_id)
 
 
-# ── WebSocket: standings ──────────────────────────────────────────
+# ── WebSocket: standings (push every 3 s) ─────────────────────────
 
 @router.websocket("/{contest_id}/ws")
 async def standings_ws(contest_id: str, websocket: WebSocket, db: Session = Depends(get_db)):
     await manager.connect_standings(contest_id, websocket)
     try:
-        # Send current standings immediately on connect
-        standings = get_standings_by_contest(db, contest_id)
-        rows = [
-            {
-                "id": str(s.id),
-                "user_id": str(s.user_id),
-                "contest_id": str(s.contest_id),
-                "score": s.score,
-                "penalty": s.penalty,
-                "rank": s.rank,
-            }
-            for s in standings
-        ]
-        await websocket.send_text(json.dumps({"type": "standings", "data": rows}))
-        # Keep alive and wait for client ping
         while True:
-            await websocket.receive_text()
+            standings = get_standings_by_contest(db, contest_id)
+            rows = _standings_rows(standings)
+            await websocket.send_text(json.dumps({"type": "standings", "data": rows}))
+            # Wait 3 s or until client pings — whichever comes first
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=3.0)
+            except asyncio.TimeoutError:
+                pass
     except WebSocketDisconnect:
         manager.disconnect_standings(contest_id, websocket)
     except Exception:
         manager.disconnect_standings(contest_id, websocket)
 
 
-# ── WebSocket: chat ───────────────────────────────────────────────
+# ── WebSocket: chat (all participants can write) ──────────────────
 
 @router.websocket("/{contest_id}/chat/ws")
 async def chat_ws(
@@ -85,21 +96,20 @@ async def chat_ws(
     token: str = Query(None),
     db: Session = Depends(get_db),
 ):
-    # Authenticate via token query param
-    user_id = None
-    username = None
+    user_id: str | None = None
+    username: str | None = None
     if token:
         uid_str = decode_access_token(token)
         if uid_str:
             from users.crud import get_user_by_id
-            user = get_user_by_id(db, uuid.UUID(uid_str))
+            user = get_user_by_id(db, _uuid.UUID(uid_str))
             if user and user.is_active:
                 user_id = str(user.id)
                 username = user.username
 
     await manager.connect_chat(contest_id, websocket)
     try:
-        # Send message history on connect
+        # Send history on connect
         from chat_messages.crud import get_messages_by_contest
         messages = get_messages_by_contest(db, contest_id, 0, 100)
         history = [
@@ -114,11 +124,10 @@ async def chat_ws(
         ]
         await websocket.send_text(json.dumps({"type": "history", "messages": history}))
 
-        # Listen for incoming messages
         while True:
             raw = await websocket.receive_text()
             if not user_id:
-                continue  # не авторизован — только читаем
+                continue
 
             try:
                 data = json.loads(raw)
@@ -129,32 +138,17 @@ async def chat_ws(
             if not content:
                 continue
 
-            # Check if contest is live — only organizer can write during contest
-            from contests.crud import get_contest_by_id
-            from contests.models import ContestStatus
-            from datetime import datetime as _dt
-            _contest = get_contest_by_id(db, uuid.UUID(contest_id))
-            if _contest:
-                _now = _dt.utcnow()
-                _live = _contest.starts_at <= _now <= _contest.ends_at
-                _is_organizer = str(_contest.author_id) == user_id
-                if _live and not _is_organizer:
-                    await websocket.send_text(json.dumps({"type": "frozen", "message": "Чат заморожен во время контеста"}))
-                    continue
-
-            # Save to DB
             from chat_messages.crud import create_message
-            msg = create_message(db, uuid.UUID(user_id), content, uuid.UUID(contest_id))
+            msg = create_message(db, _uuid.UUID(user_id), content, _uuid.UUID(contest_id))
 
-            broadcast_data = {
+            await manager.broadcast_chat(contest_id, {
                 "type": "message",
                 "id": str(msg.id),
                 "user_id": user_id,
                 "username": username,
                 "content": msg.content,
                 "created_at": msg.created_at.isoformat(),
-            }
-            await manager.broadcast_chat(contest_id, broadcast_data)
+            })
 
     except WebSocketDisconnect:
         manager.disconnect_chat(contest_id, websocket)

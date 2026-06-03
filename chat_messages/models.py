@@ -11,6 +11,7 @@ class ChatMessage(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     contest_id = Column(UUID(as_uuid=True), ForeignKey("contests.id", ondelete="CASCADE"), nullable=True)
     duel_id = Column(UUID(as_uuid=True), ForeignKey("duels.id", ondelete="CASCADE"), nullable=True)
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), nullable=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
     is_deleted = Column(Boolean, default=False)
@@ -19,3 +20,4 @@ class ChatMessage(Base):
     user = relationship("User", back_populates="chat_messages")
     contest = relationship("Contest")
     duel = relationship("Duel")
+    team = relationship("Team")

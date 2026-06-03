@@ -360,6 +360,27 @@ def _update_contest_standings(db, sub):
 
         upsert_standing(db, sub.contest_id, sub.user_id, score, penalty)
         update_ranks(db, sub.contest_id)
+
+        # Instant broadcast to all WS clients watching this contest
+        try:
+            from contest_standings.crud import get_standings_by_contest
+            from websocket_manager import manager
+            updated = get_standings_by_contest(db, str(sub.contest_id))
+            rows = [
+                {
+                    "id": str(s.id),
+                    "user_id": str(s.user_id),
+                    "contest_id": str(s.contest_id),
+                    "username": s.user.username if s.user else None,
+                    "score": s.score,
+                    "penalty": s.penalty,
+                    "rank": s.rank,
+                }
+                for s in updated
+            ]
+            manager.broadcast_standings_sync(str(sub.contest_id), rows)
+        except Exception:
+            pass
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"standings update failed: {e}")

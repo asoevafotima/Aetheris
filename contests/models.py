@@ -30,6 +30,7 @@ class Contest(Base):
     ends_at = Column(DateTime, nullable=False)
     author_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     is_public = Column(Boolean, default=True)
+    is_team_contest = Column(Boolean, default=False)
     max_participants = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

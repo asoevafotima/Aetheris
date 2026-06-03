@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from contextlib import asynccontextmanager
 from database import Base, engine
+import asyncio
 import os
 from dotenv import load_dotenv
 
@@ -13,25 +15,34 @@ def _run_migrations():
     with engine.connect() as conn:
         insp = inspect(engine)
 
-        # duels — new columns added in v2
+        # duels columns
         duel_cols = {c['name'] for c in insp.get_columns('duels')}
-        migrations = [
+        for col, sql in [
             ("difficulty",           "ALTER TABLE duels ADD COLUMN difficulty VARCHAR(20) NOT NULL DEFAULT 'easy'"),
             ("challenger_solved_at", "ALTER TABLE duels ADD COLUMN challenger_solved_at DATETIME"),
             ("opponent_solved_at",   "ALTER TABLE duels ADD COLUMN opponent_solved_at DATETIME"),
             ("challenger_score",     "ALTER TABLE duels ADD COLUMN challenger_score FLOAT NOT NULL DEFAULT 0.0"),
             ("opponent_score",       "ALTER TABLE duels ADD COLUMN opponent_score FLOAT NOT NULL DEFAULT 0.0"),
-        ]
-        for col, sql in migrations:
+        ]:
             if col not in duel_cols:
                 conn.execute(text(sql))
 
-        # problems — difficulty_code and topic columns
+        # problems columns
         prob_cols = {c['name'] for c in insp.get_columns('problems')}
         if 'difficulty_code' not in prob_cols:
             conn.execute(text("ALTER TABLE problems ADD COLUMN difficulty_code VARCHAR(10)"))
         if 'topic' not in prob_cols:
             conn.execute(text("ALTER TABLE problems ADD COLUMN topic VARCHAR(100)"))
+
+        # contests columns
+        contest_cols = {c['name'] for c in insp.get_columns('contests')}
+        if 'is_team_contest' not in contest_cols:
+            conn.execute(text("ALTER TABLE contests ADD COLUMN is_team_contest BOOLEAN NOT NULL DEFAULT 0"))
+
+        # chat_messages columns
+        chat_cols = {c['name'] for c in insp.get_columns('chat_messages')}
+        if 'team_id' not in chat_cols:
+            conn.execute(text("ALTER TABLE chat_messages ADD COLUMN team_id VARCHAR(36) REFERENCES teams(id)"))
 
         conn.commit()
 
@@ -75,10 +86,19 @@ from audit_logs.router import router as audit_logs_router
 
 Base.metadata.create_all(bind=engine)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from websocket_manager import set_main_loop
+    set_main_loop(asyncio.get_event_loop())
+    yield
+
+
 app = FastAPI(
     title="Aetheris",
     description="Олимпиадная платформа нового поколения",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -130,6 +150,7 @@ app.include_router(problem_bookmarks_router)
 app.include_router(follows_router)
 app.include_router(audit_logs_router)
 
+
 @app.get("/")
 def root():
-    return {"message": "CodeArena API is running"}
+    return {"message": "Aetheris API is running"}
