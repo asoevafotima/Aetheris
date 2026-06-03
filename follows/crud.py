@@ -26,7 +26,10 @@ def unfollow_user(db: Session, follower_id: uuid.UUID, following_id: uuid.UUID):
     return db_follow
 
 def get_following(db: Session, user_id: uuid.UUID):
-    return db.query(Follow).filter(Follow.follower_id == user_id).all()
+    from sqlalchemy.orm import selectinload
+    return db.query(Follow).options(
+        selectinload(Follow.following)
+    ).filter(Follow.follower_id == user_id).all()
 
 def get_followers(db: Session, user_id: uuid.UUID):
     return db.query(Follow).filter(Follow.following_id == user_id).all()

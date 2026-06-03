@@ -50,7 +50,7 @@ export function Friends() {
     },
   });
 
-  const friends = (following ?? []) as { following_id: string; following?: User }[];
+  const friends = (following ?? []) as { following_id: string; following_user?: { id: string; username: string } }[];
   const followingIds = new Set(friends.map(f => f.following_id));
 
   const DIFFS = [
@@ -132,6 +132,7 @@ export function Friends() {
           <div className="divide-y divide-[var(--border)]">
             {friends.map(f => {
               const uid = f.following_id;
+              const username = f.following_user?.username ?? uid.slice(0, 8);
               const diff = duelDiff[uid] ?? 'easy';
               const sent = inviteSent[uid];
               return (
@@ -143,11 +144,11 @@ export function Friends() {
                 >
                   <Link to={`/profile/${uid}`} className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-sm font-bold text-white shrink-0">
-                      {uid.slice(0, 1).toUpperCase()}
+                      {username[0].toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-[var(--text-1)] truncate">
-                        {uid.slice(0, 8)}…
+                        {username}
                       </p>
                       <p className="text-xs text-[var(--text-3)]">Профиль →</p>
                     </div>

@@ -16,8 +16,6 @@ export const authApi = {
     api.post('/auth/logout', { refresh_token }),
 };
 
-// Users (see also extended usersApi below near duels)
-
 // Profiles
 export const profilesApi = {
   me: () => api.get<UserProfile>('/profiles/me').then(r => r.data),
