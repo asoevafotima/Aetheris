@@ -8,23 +8,18 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
 }
 
-const V = {
-  primary:
-    'btn-glow text-white',
-  secondary:
-    'bg-gradient-to-r from-cyan-500/80 to-sky-500/80 text-white border border-cyan-400/20 hover:shadow-lg hover:shadow-cyan-500/25 hover:-translate-y-px transition-all duration-200',
-  ghost:
-    'text-[var(--t2)] hover:text-[var(--t1)] hover:bg-[var(--hv)] border border-transparent transition-all duration-150',
-  danger:
-    'bg-gradient-to-r from-red-600/90 to-rose-600/90 text-white border border-red-400/20 hover:shadow-lg hover:shadow-red-500/25 hover:-translate-y-px transition-all duration-200',
-  outline:
-    'btn-ghost-border',
+const V: Record<string, string> = {
+  primary:   'btn-primary font-semibold text-white',
+  secondary: 'bg-gradient-to-r from-cyan-500 to-sky-600 text-white border border-cyan-400/20 hover:shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-px transition-all duration-200',
+  ghost:     'btn-ghost',
+  danger:    'bg-gradient-to-r from-red-600 to-rose-600 text-white border border-red-400/20 hover:shadow-lg hover:shadow-red-500/20 hover:-translate-y-px transition-all duration-200',
+  outline:   'btn-outline',
 };
 
-const S = {
-  sm: 'px-3.5 py-1.5 text-xs gap-1.5 rounded-xl',
-  md: 'px-4.5 py-2   text-sm gap-2   rounded-xl',
-  lg: 'px-7   py-3   text-sm gap-2   rounded-2xl font-semibold',
+const S: Record<string, string> = {
+  sm: 'px-3   py-1.5 text-xs  gap-1.5 rounded-xl',
+  md: 'px-4   py-2   text-sm  gap-2   rounded-xl',
+  lg: 'px-5   py-2.5 text-sm  gap-2   rounded-xl font-semibold',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

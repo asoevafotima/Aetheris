@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search, Code2, Bookmark, BookmarkCheck, Plus,
-  ChevronLeft, ChevronRight, SlidersHorizontal,
-} from 'lucide-react';
+import { Search, Code2, Bookmark, BookmarkCheck, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { problemsApi, bookmarksApi } from '../api/endpoints';
 import { DifficultyBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -14,223 +11,173 @@ import { useT } from '../i18n';
 import { useAuthStore } from '../store/authStore';
 import type { ProblemShort } from '../types';
 
-const TOPICS = [
-  'Массивы', 'Строки', 'Математика', 'Ввод/вывод',
-  'Сортировка', 'Поиск', 'Динамическое программирование',
-  'Жадные алгоритмы', 'Рекурсия', 'Графы', 'Деревья', 'Брутфорс',
-];
-
-const DIFF_OPTIONS = [
-  { value: '', label: 'Все',     dot: 'bg-[var(--text-3)]'  },
-  { value: 'easy',   label: 'Лёгкая',  dot: 'bg-emerald-400' },
-  { value: 'medium', label: 'Средняя', dot: 'bg-yellow-400'  },
-  { value: 'hard',   label: 'Сложная', dot: 'bg-orange-400'  },
-  { value: 'expert', label: 'Эксперт', dot: 'bg-red-400'     },
+const TOPICS = ['Массивы','Строки','Математика','Ввод/вывод','Сортировка','Поиск','Динамическое программирование','Жадные алгоритмы','Рекурсия','Графы','Деревья','Брутфорс'];
+const DIFFS = [
+  {v:'',     l:'Все',     dot:'rgba(255,255,255,0.3)'},
+  {v:'easy', l:'Лёгкая',  dot:'#34d399'},
+  {v:'medium',l:'Средняя',dot:'#fbbf24'},
+  {v:'hard', l:'Сложная', dot:'#fb923c'},
+  {v:'expert',l:'Эксперт',dot:'#f87171'},
 ];
 
 export function Problems() {
-  const t               = useT();
-  const { user }        = useAuthStore();
+  const t = useT();
+  const { user } = useAuthStore();
   const [search, setSearch]   = useState('');
-  const [difficulty, setDiff] = useState('');
+  const [diff, setDiff]       = useState('');
   const [topic, setTopic]     = useState('');
   const [page, setPage]       = useState(0);
   const limit = 20;
 
   const { data: problems, isLoading } = useQuery({
-    queryKey: ['problems', difficulty, topic, page],
-    queryFn: () => problemsApi.list({ skip: page * limit, limit, difficulty: difficulty || undefined, topic: topic || undefined }),
+    queryKey: ['problems', diff, topic, page],
+    queryFn: () => problemsApi.list({ skip: page*limit, limit, difficulty: diff||undefined, topic: topic||undefined }),
   });
-  const { data: bookmarks, refetch: refetchBm } = useQuery({ queryKey: ['bookmarks'], queryFn: bookmarksApi.list });
-
-  const bookmarkedIds = new Set(((bookmarks ?? []) as { problem_id: string }[]).map(b => b.problem_id));
-  const filtered = (problems ?? []).filter((p: ProblemShort) =>
-    p.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const { data: bookmarks, refetch: refBm } = useQuery({ queryKey: ['bookmarks'], queryFn: bookmarksApi.list });
+  const bmIds = new Set(((bookmarks??[]) as {problem_id:string}[]).map(b=>b.problem_id));
+  const filtered = (problems??[]).filter((p:ProblemShort) => p.title.toLowerCase().includes(search.toLowerCase()));
 
   const toggleBm = async (e: React.MouseEvent, pid: string) => {
     e.preventDefault();
-    try {
-      if (bookmarkedIds.has(pid)) await bookmarksApi.remove(pid);
-      else await bookmarksApi.add(pid);
-      refetchBm();
-    } catch {}
+    try { bmIds.has(pid) ? await bookmarksApi.remove(pid) : await bookmarksApi.add(pid); refBm(); } catch {/**/}
   };
 
   return (
-    <div className="p-4 lg:p-6 max-w-6xl mx-auto">
-
+    <div style={{ padding: '32px', background: 'var(--bg)', minHeight: '100vh' }}>
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22,1,0.36,1] }} className="mb-7">
-        <div className="flex items-end justify-between gap-4 flex-wrap">
+      <motion.div initial={{opacity:0,y:-16}} animate={{opacity:1,y:0}} transition={{duration:0.4,ease:'easeOut'}} style={{marginBottom:32}}>
+        <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:16,flexWrap:'wrap'}}>
           <div>
-            <h1 className="text-3xl font-black text-[var(--text-1)] flex items-center gap-3">
-              <Code2 size={26} className="text-purple-400" /> {t.problems.title}
+            <h1 style={{fontSize:30,fontWeight:800,letterSpacing:'-0.03em',color:'var(--text-1)',display:'flex',alignItems:'center',gap:12}}>
+              <Code2 size={26} color="var(--accent)"/> {t.problems.title}
             </h1>
-            <p className="text-[var(--text-3)] text-sm mt-1">{t.problems.subtitle}</p>
+            <p style={{fontSize:14,color:'var(--text-3)',marginTop:6}}>{t.problems.subtitle}</p>
           </div>
-          {(user?.role === 'admin' || user?.role === 'moderator') && (
-            <Link to="/problems/create">
-              <Button icon={<Plus size={15} />}>Создать задачу</Button>
-            </Link>
+          {(user?.role==='admin'||user?.role==='moderator') && (
+            <Link to="/problems/create"><Button icon={<Plus size={14}/>}>Создать задачу</Button></Link>
           )}
         </div>
       </motion.div>
 
-      {/* Search + difficulty segmented control */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+      {/* Filters */}
+      <div style={{display:'flex',flexDirection:'column',gap:14,marginBottom:24}}>
         {/* Search */}
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-          <input
-            className="input-theme w-full rounded-xl pl-9 pr-3 py-2.5 text-sm"
-            placeholder={t.common.search + '…'}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+        <div style={{position:'relative',maxWidth:500}}>
+          <Search size={15} color="var(--text-3)" style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}/>
+          <input className="input-theme" style={{paddingLeft:38,paddingRight:12,paddingTop:10,paddingBottom:10,width:'100%'}}
+            placeholder={t.common.search+'…'} value={search} onChange={e=>setSearch(e.target.value)}/>
         </div>
+
         {/* Difficulty segmented */}
-        <div className="flex rounded-xl border border-[var(--border)] overflow-hidden shrink-0" style={{ background: 'var(--surface-2)' }}>
-          {DIFF_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => { setDiff(opt.value); setPage(0); }}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                difficulty === opt.value
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--hover)]'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${difficulty === opt.value ? 'bg-white' : opt.dot}`} />
-              {opt.label}
+        <div style={{display:'flex',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden',width:'fit-content'}}>
+          {DIFFS.map(({v,l,dot})=>(
+            <button key={v} onClick={()=>{setDiff(v);setPage(0);}}
+              style={{
+                display:'flex',alignItems:'center',gap:6,padding:'8px 14px',fontSize:12,fontWeight:500,cursor:'pointer',border:'none',whiteSpace:'nowrap',transition:'all 0.15s',
+                background: diff===v ? 'var(--accent)' : 'transparent',
+                color: diff===v ? '#fff' : 'var(--text-3)',
+              }}>
+              <span style={{width:6,height:6,borderRadius:'50%',background:diff===v?'rgba(255,255,255,0.7)':dot,flexShrink:0}}/>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {/* Topic pills */}
+        <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+          <button onClick={()=>{setTopic('');setPage(0);}}
+            style={{padding:'5px 12px',borderRadius:99,fontSize:12,fontWeight:500,cursor:'pointer',border:`1px solid ${topic===''?'var(--accent)':'var(--border)'}`,background:topic===''?'rgba(124,58,237,0.1)':'transparent',color:topic===''?'#a78bfa':'var(--text-3)',transition:'all 0.15s'}}>
+            Все темы
+          </button>
+          {TOPICS.map(tp=>(
+            <button key={tp} onClick={()=>{setTopic(topic===tp?'':tp);setPage(0);}}
+              style={{padding:'5px 12px',borderRadius:99,fontSize:12,fontWeight:500,cursor:'pointer',border:`1px solid ${topic===tp?'var(--accent)':'var(--border)'}`,background:topic===tp?'rgba(124,58,237,0.1)':'transparent',color:topic===tp?'#a78bfa':'var(--text-3)',transition:'all 0.15s'}}>
+              {tp}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Topic pills */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        <button
-          onClick={() => { setTopic(''); setPage(0); }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border ${
-            topic === ''
-              ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
-              : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border-2)] hover:text-[var(--text-2)]'
-          }`}
-        >
-          <SlidersHorizontal size={10} /> Все темы
-        </button>
-        {TOPICS.map(t => (
-          <button
-            key={t}
-            onClick={() => { setTopic(topic === t ? '' : t); setPage(0); }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border ${
-              topic === t
-                ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
-                : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border-2)] hover:text-[var(--text-2)]'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
       {/* Table */}
-      <div className="rounded-2xl border border-[var(--border)] overflow-hidden" style={{ background: 'var(--surface)', boxShadow: 'var(--shadow-md)' }}>
-        <table className="w-full">
+      <div style={{borderRadius:16,overflow:'hidden',background:'var(--surface)',border:'1px solid var(--border)',boxShadow:'var(--shadow)'}}>
+        <table style={{width:'100%',borderCollapse:'collapse'}}>
           <thead>
-            <tr className="border-b border-[var(--border)]" style={{ background: 'var(--surface-2)' }}>
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider w-14">#</th>
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider">Задача</th>
-              <th className="text-left px-3 py-3 text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider hidden sm:table-cell">Код</th>
-              <th className="text-left px-3 py-3 text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider">Сложность</th>
-              <th className="text-left px-3 py-3 text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider hidden md:table-cell">Тема</th>
-              <th className="text-right px-4 py-3 text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider">{t.problems.solved}</th>
-              <th className="w-10 px-3 py-3" />
+            <tr style={{background:'var(--bg-2,var(--bg))'}}>
+              {['#','Задача','Код','Сложность','Тема','Решено',''].map((h,i)=>(
+                <th key={i} style={{padding:'12px 16px',textAlign:i===5||i===6?'right':'left',fontSize:10,fontWeight:600,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap',
+                  display: i===2?'none':i===4?'none':undefined}}>
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {isLoading
-              ? Array(10).fill(0).map((_, i) => (
-                  <tr key={i} className="border-b border-[var(--border)]">
-                    <td colSpan={7} className="px-4 py-4"><SkeletonLine className="w-full h-8" /></td>
+              ? Array(10).fill(0).map((_,i)=>(
+                  <tr key={i} style={{borderBottom:'1px solid var(--border)'}}>
+                    <td colSpan={7} style={{padding:'12px 16px'}}><SkeletonLine className="h-8 w-full"/></td>
                   </tr>
                 ))
               : (
                 <AnimatePresence>
-                  {filtered.map((p: ProblemShort, i: number) => (
-                    <motion.tr
-                      key={p.id}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.025 }}
-                      className="border-b border-[var(--border)] group relative cursor-pointer"
-                      style={{ transition: 'background 0.15s' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '')}
-                    >
-                      {/* Left accent line on hover */}
-                      <td className="px-4 py-4 text-[var(--text-3)] text-xs font-mono w-14">
-                        <span className="group-hover:opacity-0 transition-opacity">{page * limit + i + 1}</span>
-                        <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-r" />
+                  {filtered.map((p:ProblemShort, i:number)=>(
+                    <motion.tr key={p.id} initial={{opacity:0,x:-6}} animate={{opacity:1,x:0}} transition={{delay:i*0.02}}
+                      style={{borderBottom:'1px solid var(--border)',cursor:'pointer',transition:'background 0.1s'}}
+                      onMouseEnter={e=>(e.currentTarget.style.background='var(--hover)')}
+                      onMouseLeave={e=>(e.currentTarget.style.background='')}>
+                      <td style={{padding:'13px 16px',fontSize:12,fontFamily:'JetBrains Mono,monospace',color:'var(--text-3)',width:48}}>
+                        {page*limit+i+1}
                       </td>
-                      <td className="px-4 py-4">
-                        <Link to={`/problems/${p.slug}`}
-                          className="font-medium text-sm text-[var(--text-1)] group-hover:text-purple-400 transition-colors flex items-center gap-2">
-                          <Code2 size={13} className="text-[var(--text-3)] shrink-0" />
-                          {p.title}
+                      <td style={{padding:'13px 16px'}}>
+                        <Link to={`/problems/${p.slug}`} style={{textDecoration:'none',display:'flex',alignItems:'center',gap:8}}>
+                          <Code2 size={13} color="var(--text-3)"/>
+                          <span style={{fontSize:13,fontWeight:500,color:'var(--text-1)',transition:'color 0.15s'}}
+                            onMouseEnter={e=>(e.currentTarget.style.color='var(--accent)')}
+                            onMouseLeave={e=>(e.currentTarget.style.color='var(--text-1)')}>
+                            {p.title}
+                          </span>
                         </Link>
                       </td>
-                      <td className="px-3 py-4 hidden sm:table-cell">
-                        {p.difficulty_code ? (
-                          <span className="font-mono text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md uppercase">{p.difficulty_code}</span>
-                        ) : <span className="text-[var(--text-3)] text-xs">—</span>}
+                      <td style={{padding:'13px 8px',display:'none'}}>
+                        {p.difficulty_code && <span style={{fontFamily:'JetBrains Mono,monospace',fontSize:10,fontWeight:700,color:'#a78bfa',background:'rgba(124,58,237,0.1)',border:'1px solid rgba(124,58,237,0.2)',padding:'2px 7px',borderRadius:6,textTransform:'uppercase'}}>{p.difficulty_code}</span>}
                       </td>
-                      <td className="px-3 py-4"><DifficultyBadge difficulty={p.difficulty} /></td>
-                      <td className="px-3 py-4 hidden md:table-cell">
-                        {p.topic
-                          ? <span className="text-xs text-[var(--text-2)] bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-0.5 rounded-full">{p.topic}</span>
-                          : <span className="text-[var(--text-3)] text-xs">—</span>}
+                      <td style={{padding:'13px 8px'}}><DifficultyBadge difficulty={p.difficulty}/></td>
+                      <td style={{padding:'13px 8px',display:'none'}}>
+                        {p.topic && <span style={{fontSize:11,color:'var(--text-2)',background:'var(--bg)',border:'1px solid var(--border)',padding:'2px 9px',borderRadius:99}}>{p.topic}</span>}
                       </td>
-                      <td className="px-4 py-4 text-right text-xs text-[var(--text-3)] font-mono">{p.solve_count.toLocaleString()}</td>
-                      <td className="px-3 py-4 text-right">
-                        <button
-                          onClick={e => toggleBm(e, p.id)}
-                          className="text-[var(--text-3)] hover:text-yellow-400 transition-all cursor-pointer opacity-0 group-hover:opacity-100 hover:scale-110"
-                        >
-                          {bookmarkedIds.has(p.id)
-                            ? <BookmarkCheck size={15} className="text-yellow-400" />
-                            : <Bookmark size={15} />}
+                      <td style={{padding:'13px 16px',textAlign:'right',fontSize:12,fontFamily:'JetBrains Mono,monospace',color:'var(--text-3)'}}>
+                        {p.solve_count.toLocaleString()}
+                      </td>
+                      <td style={{padding:'13px 12px',textAlign:'right'}}>
+                        <button onClick={e=>toggleBm(e,p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-3)',opacity:0,transition:'opacity 0.15s',display:'flex',alignItems:'center'}}
+                          onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.opacity='1';(e.currentTarget as HTMLButtonElement).style.color=bmIds.has(p.id)?'#fbbf24':'var(--text-2)';}}
+                          onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.opacity='0';}}
+                          className="group-hover:opacity-100">
+                          {bmIds.has(p.id) ? <BookmarkCheck size={14} color="#fbbf24"/> : <Bookmark size={14}/>}
                         </button>
                       </td>
                     </motion.tr>
                   ))}
                 </AnimatePresence>
-              )
-            }
+              )}
           </tbody>
         </table>
-
-        {!isLoading && filtered.length === 0 && (
-          <div className="py-16 text-center text-[var(--text-3)]">
-            <Code2 size={40} className="mx-auto mb-3 opacity-20" />
-            <p className="text-sm">{t.problems.not_found}</p>
+        {!isLoading && filtered.length===0 && (
+          <div style={{padding:'64px 16px',textAlign:'center',color:'var(--text-3)'}}>
+            <Code2 size={36} style={{margin:'0 auto 12px',opacity:0.2}}/>
+            <p style={{fontSize:14}}>{t.problems.not_found}</p>
           </div>
         )}
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-5">
-        <Button variant="outline" size="sm" icon={<ChevronLeft size={14} />}
-          onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:20}}>
+        <Button variant="outline" size="sm" icon={<ChevronLeft size={13}/>} onClick={()=>setPage(Math.max(0,page-1))} disabled={page===0}>
           {t.common.back}
         </Button>
-        <div className="flex items-center gap-2 text-sm text-[var(--text-3)]">
-          <span className="px-3 py-1 rounded-lg border border-[var(--border)] font-mono text-xs text-[var(--text-2)]">{page + 1}</span>
-        </div>
-        <Button variant="outline" size="sm" icon={<ChevronRight size={14} />}
-          onClick={() => setPage(page + 1)} disabled={(problems?.length ?? 0) < limit}>
-          {t.common.next}
+        <span style={{fontSize:13,fontFamily:'JetBrains Mono,monospace',color:'var(--text-3)'}}>{page+1}</span>
+        <Button variant="outline" size="sm" onClick={()=>setPage(page+1)} disabled={(problems?.length??0)<limit}>
+          {t.common.next} <ChevronRight size={13}/>
         </Button>
       </div>
     </div>

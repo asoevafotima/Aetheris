@@ -1,28 +1,11 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import {
-  Zap, Code2, Trophy, Swords, Bot, BarChart2,
-  Users, ArrowRight, CheckCircle2, Star,
-} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Zap, ArrowRight, Code2, Trophy, Swords, Bot, BarChart2, Users, Star, Sun, Moon } from 'lucide-react';
 import { useThemeStore } from '../store/themeStore';
 import { useT } from '../i18n';
 
-/* ── Staggered reveal variants ── */
-const FADE_UP = { hidden: { opacity: 0, y: 32 }, show: { opacity: 1, y: 0 } };
-const STAGGER = { hidden: {}, show: { transition: { staggerChildren: 0.09 } } };
-
-/* ── Animated counter ── */
-function Counter({ to, suffix = '' }: { to: number | string; suffix?: string }) {
-  if (typeof to === 'string') return <span>{to}</span>;
-  const count   = useMotionValue(0);
-  const display = useTransform(count, v => Math.round(v).toLocaleString() + suffix);
-  useEffect(() => {
-    const ctrl = animate(count, to, { duration: 1.5, ease: 'easeOut' });
-    return () => ctrl.stop();
-  }, [to]);
-  return <motion.span>{display}</motion.span>;
-}
+const FI = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+const ST = { hidden: {}, show: { transition: { staggerChildren: 0.09 } } };
 
 export function Landing() {
   const { theme, toggleTheme, lang, toggleLang } = useThemeStore();
@@ -30,366 +13,281 @@ export function Landing() {
   const isDark = theme === 'dark';
 
   const FEATURES = [
-    { icon: Code2,     g: 'from-indigo-500 to-violet-600', title: lang==='ru'?'Умный судья':'Smart Judge',           desc: lang==='ru'?'Python и C++. Реальное выполнение. Детальный разбор каждого теста с AI-объяснением.':'Python & C++. Real execution. Per-test AI analysis.' },
-    { icon: Trophy,    g: 'from-amber-400  to-orange-500',  title: lang==='ru'?'Живые контесты':'Live Contests',      desc: lang==='ru'?'ICPC-стиль. Таблица обновляется мгновенно через WebSocket. Заморозка за 30 минут.':'ICPC-style. Live standings via WebSocket. Final 30-min freeze.' },
-    { icon: Swords,    g: 'from-rose-500   to-pink-600',    title: lang==='ru'?'Дуэли 1 на 1':'1v1 Duels',           desc: lang==='ru'?'Вызывай друзей. Случайная задача по теме. Кто быстрее — тот победил.':'Challenge friends. Random problem by topic. Fastest wins.' },
-    { icon: Bot,       g: 'from-cyan-400   to-sky-600',     title: lang==='ru'?'AI Наставник':'AI Mentor',           desc: lang==='ru'?'Groq LLM. Объясняет ошибки на русском. Без спойлеров — только направление мысли.':'Groq LLM. Explains errors in your language. No spoilers.' },
-    { icon: BarChart2, g: 'from-teal-400   to-emerald-600', title: lang==='ru'?'Визуализации':'Visualizations',      desc: lang==='ru'?'BFS, DFS, сортировки — пошаговые анимированные примеры для понимания алгоритмов.':'BFS, DFS, sorting — animated step-by-step algorithm demos.' },
-    { icon: Users,     g: 'from-fuchsia-500 to-purple-600', title: lang==='ru'?'Командные олимпиады':'Team Olympiads', desc: lang==='ru'?'Создай команду. Real-time чат. Соревнуйтесь вместе в командных контестах.':'Create teams. Real-time chat. Compete together in team contests.' },
+    { Icon: Code2,     title: lang==='ru'?'Умный судья':'Smart Judge',       desc: lang==='ru'?'Python и C++. Реальная проверка. AI разбирает ошибки на русском.':'Real Python & C++ execution with AI error analysis.' },
+    { Icon: Trophy,    title: lang==='ru'?'Живые контесты':'Live Contests',   desc: lang==='ru'?'ICPC‑стиль с WebSocket. Таблица обновляется в реальном времени.':'ICPC-style with live WebSocket standings.' },
+    { Icon: Swords,    title: lang==='ru'?'Дуэли 1 на 1':'1v1 Duels',        desc: lang==='ru'?'Вызывай соперников. Случайная задача по сложности. Кто быстрее.':'Challenge opponents. Random problem by difficulty.' },
+    { Icon: Bot,       title: lang==='ru'?'AI Наставник':'AI Mentor',         desc: lang==='ru'?'Groq LLM. Объясняет без спойлеров. Отвечает по‑русски.':'Groq LLM explains errors without spoilers.' },
+    { Icon: BarChart2, title: lang==='ru'?'Визуализации':'Visualizations',   desc: lang==='ru'?'Пошаговые анимации BFS, DFS, сортировок и других алгоритмов.':'Animated step-by-step algorithm visualizations.' },
+    { Icon: Users,     title: lang==='ru'?'Команды':'Teams',                  desc: lang==='ru'?'Командные контесты. Real‑time чат. Общий рейтинг.':'Team contests with real-time chat and ratings.' },
   ];
 
   const STATS = [
-    { v: 10, s: '+', l: lang==='ru'?'задач':'problems' },
-    { v: 5,  s: '+', l: lang==='ru'?'контестов':'contests' },
-    { v: '<1',  s: 'с', l: lang==='ru'?'проверка кода':'judge time' },
-    { v: 'AI', s: '', l: lang==='ru'?'наставник':'mentor' },
+    { n: '50K+', l: lang==='ru'?'участников':'members'  },
+    { n: '10K+', l: lang==='ru'?'задач':'problems'      },
+    { n: '1K+',  l: lang==='ru'?'контестов':'contests'  },
+    { n: 'AI',   l: lang==='ru'?'наставник':'mentor'    },
   ];
 
-  const CMP = [
-    [lang==='ru'?'AI наставник':'AI Mentor',       true,false,false],
-    [lang==='ru'?'Дуэли 1v1':'1v1 Duels',          true,false,false],
-    [lang==='ru'?'Командные контесты':'Team Contests',true,true,false],
-    [lang==='ru'?'WebSocket standings':'Live Standings',true,false,false],
-    [lang==='ru'?'Открытый исходник':'Open Source', true,false,false],
-  ];
+  const bg = isDark ? '#030305' : '#f8f9fc';
+  const fg = isDark ? '#f1f5f9' : '#0d0d1a';
 
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: '#030309', color: '#f1f5f9' }}>
+    <div style={{ background: bg, color: fg, fontFamily: "'Inter', sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
 
-      {/* ══ NAV ══════════════════════════════════════════════════ */}
-      <nav className="fixed top-0 w-full z-50" style={{
-        background: 'rgba(3,3,9,0.75)',
-        backdropFilter: 'blur(24px) saturate(1.4)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      {/* ─── NAV ───────────────────────────────────────────────── */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 50,
+        background: isDark ? 'rgba(3,3,5,0.85)' : 'rgba(248,249,252,0.85)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
       }}>
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center glow-pulse"
-              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
-              <Zap size={14} className="text-white" />
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              className="glow-pulse">
+              <Zap size={13} color="#fff" />
             </div>
-            <span className="font-black text-[15px] tracking-[-0.03em]"
-              style={{ background:'linear-gradient(135deg,#e0e7ff,#a78bfa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-              Aetheris
-            </span>
+            <span style={{ fontWeight: 900, fontSize: 15, letterSpacing: '-0.03em' }} className="gradient-text">Aetheris</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <button onClick={toggleTheme} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-all cursor-pointer text-sm">
-              {isDark ? '☀️' : '🌙'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={toggleTheme} style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: isDark ? '#94a3b8' : '#64748b' }} className="hover:bg-white/10 transition-colors">
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
             </button>
-            <button onClick={toggleLang} className="h-8 px-3 rounded-xl text-[11px] font-bold tracking-wider text-slate-400 hover:text-white hover:bg-white/8 transition-all cursor-pointer">
+            <button onClick={toggleLang} style={{ height: 32, padding: '0 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: isDark ? '#94a3b8' : '#64748b' }}>
               {lang.toUpperCase()}
             </button>
-            <Link to="/login">
-              <button className="h-9 px-4 rounded-xl text-[13px] font-medium text-slate-300 hover:text-white hover:bg-white/6 transition-all cursor-pointer">
-                {t.auth.login}
-              </button>
+            <Link to="/login" style={{ height: 34, padding: '0 14px', borderRadius: 10, display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500, color: isDark ? '#94a3b8' : '#4a5568', textDecoration: 'none' }}
+              className="hover:text-white/90 transition-colors">
+              {t.auth.login}
             </Link>
-            <Link to="/register">
-              <button className="h-9 px-5 rounded-xl text-[13px] font-semibold text-white btn-glow cursor-pointer">
-                {lang==='ru'?'Начать':'Get Started'}
-              </button>
+            <Link to="/register" style={{ height: 34, padding: '0 16px', borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+              className="btn-primary">
+              {lang==='ru'?'Начать':'Get Started'}
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* ══ HERO ═════════════════════════════════════════════════ */}
-      <section className="relative min-h-screen flex items-center overflow-hidden pt-14">
-        {/* Grid */}
-        <div className="absolute inset-0 grid-bg opacity-100" />
+      {/* ─── HERO ──────────────────────────────────────────────── */}
+      <section style={{ position: 'relative', minHeight: '92vh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+        {/* Grid bg */}
+        <div className="hero-grid" style={{ position: 'absolute', inset: 0 }} />
+        {/* Glow blobs */}
+        <div className="hero-glow-left" />
+        <div className="hero-glow-right" />
+        {/* Bottom fade */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, background: `linear-gradient(to top, ${bg}, transparent)`, zIndex: 1 }} />
 
-        {/* Blobs */}
-        <div className="blob blob-indigo w-[700px] h-[700px]" style={{ top: '-10%', left: '-5%' }} />
-        <div className="blob blob-violet w-[500px] h-[500px]" style={{ bottom: '0',  right: '-5%' }} />
-        <div className="blob blob-cyan   w-[400px] h-[400px]" style={{ top: '60%',  left: '40%'  }} />
+        <div style={{ position: 'relative', zIndex: 2, maxWidth: 1100, margin: '0 auto', padding: '80px 24px', width: '100%', textAlign: 'center' }}>
+          <motion.div initial="hidden" animate="show" variants={ST} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28 }}>
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 hero-bg" />
-
-        {/* Vignette */}
-        <div className="absolute inset-0" style={{
-          background: 'radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(3,3,9,0.7) 100%)',
-        }} />
-
-        <div className="relative max-w-6xl mx-auto px-6 py-32 w-full">
-          <motion.div initial="hidden" animate="show" variants={STAGGER} className="flex flex-col items-center text-center gap-8">
-
-            {/* Beta pill */}
-            <motion.div variants={FADE_UP}>
-              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-[12px] font-semibold"
-                style={{ background:'rgba(99,102,241,0.1)', border:'1px solid rgba(99,102,241,0.25)', color:'#a5b4fc' }}>
-                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                {lang==='ru'?'Powered by Groq AI · Бета':'Powered by Groq AI · Beta'}
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              </div>
+            {/* Badge */}
+            <motion.div variants={FI}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 99,
+                background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)',
+                color: '#a78bfa', fontSize: 12, fontWeight: 600,
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', animation: 'glow-pulse 2s infinite' }} />
+                {lang==='ru'?'Powered by Groq AI · Beta':'Powered by Groq AI · Beta'}
+              </span>
             </motion.div>
 
-            {/* Main headline */}
-            <motion.div variants={FADE_UP} className="max-w-4xl">
-              <h1 className="display">
-                {lang === 'ru' ? (
-                  <>
-                    <span className="gradient-text-hero block">Олимпиадное</span>
-                    <span style={{ color: 'rgba(241,245,249,0.9)' }}>программирование</span>
-                    <br />
-                    <span className="gradient-text-hero">нового уровня</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="gradient-text-hero">Competitive</span>
-                    <br />
-                    <span style={{ color: 'rgba(241,245,249,0.9)' }}>Programming</span>{' '}
-                    <span className="gradient-text-hero">Reimagined</span>
-                  </>
-                )}
+            {/* Title */}
+            <motion.div variants={FI}>
+              <h1 style={{ fontSize: 'clamp(52px,8vw,96px)', fontWeight: 800, lineHeight: 1.02, letterSpacing: '-0.04em', margin: 0 }}>
+                <span className="gradient-text">Aetheris</span>
               </h1>
+              <p style={{ fontSize: 'clamp(16px,2vw,22px)', color: isDark ? '#94a3b8' : '#4a5568', marginTop: 20, maxWidth: 600, lineHeight: 1.6 }}>
+                {lang==='ru'
+                  ? 'Олимпиадная платформа нового уровня. AI‑наставник, дуэли 1 на 1, командные контесты и мгновенная проверка кода.'
+                  : 'Next-gen competitive programming platform. AI mentor, 1v1 duels, team contests, and instant code judging.'}
+              </p>
             </motion.div>
-
-            {/* Subtitle */}
-            <motion.p variants={FADE_UP} className="text-lg md:text-xl max-w-2xl leading-relaxed text-slate-400 font-light">
-              {lang==='ru'
-                ? 'Лучше Codeforces по интерфейсу. Мощнее LeetCode по функциям. AI-наставник, дуэли и командные контесты — всё в одном месте.'
-                : 'Better UI than Codeforces. More powerful than LeetCode. AI mentor, duels, team contests — all in one place.'}
-            </motion.p>
 
             {/* CTA */}
-            <motion.div variants={FADE_UP} className="flex flex-wrap items-center justify-center gap-3">
+            <motion.div variants={FI} style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
               <Link to="/register">
                 <motion.button
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-[15px] font-bold text-white cursor-pointer btn-glow"
+                  whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 28px', borderRadius: 12, fontSize: 14, fontWeight: 600, color: '#fff', cursor: 'pointer', border: 'none' }}
+                  className="btn-primary"
                 >
                   {lang==='ru'?'Начать бесплатно':'Start for Free'}
-                  <ArrowRight size={17} />
+                  <ArrowRight size={16} />
                 </motion.button>
               </Link>
-              <Link to="/login">
+              <Link to="/problems">
                 <motion.button
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-[15px] font-semibold cursor-pointer btn-ghost-border"
+                  whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 28px', borderRadius: 12, fontSize: 14, fontWeight: 500, cursor: 'pointer', background: 'transparent', border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`, color: isDark ? '#e2e8f0' : '#1a1a2e' }}
+                  className="btn-outline"
                 >
-                  {lang==='ru'?'Войти':'Sign In'}
+                  {lang==='ru'?'Посмотреть задачи':'Browse Problems'}
                 </motion.button>
               </Link>
             </motion.div>
 
-            {/* Language tags */}
-            <motion.div variants={FADE_UP} className="flex flex-wrap justify-center gap-2">
-              {['Python 3', 'C++17'].map(l => (
-                <span key={l} className="px-3 py-1.5 rounded-full text-[12px] font-mono font-medium"
-                  style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'#94a3b8' }}>
-                  {l}
-                </span>
-              ))}
+            {/* Code preview */}
+            <motion.div variants={FI} style={{ marginTop: 20, width: '100%', maxWidth: 560 }}>
+              <div style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, boxShadow: isDark ? '0 40px 80px rgba(0,0,0,0.8), 0 0 60px rgba(124,58,237,0.06)' : '0 20px 60px rgba(0,0,0,0.12)' }}>
+                <div style={{ background: isDark ? '#0a0a14' : '#f1f3f9', padding: '10px 16px', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {['#ff5f57','#febc2e','#28c840'].map(c => <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7 }} />)}
+                  </div>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: isDark ? '#475569' : '#94a3b8', marginLeft: 8 }}>solution.py</span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="pill st-ac">
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', display: 'inline-block', marginRight: 4 }} />
+                      {lang==='ru'?'Принято':'Accepted'}
+                    </span>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: isDark ? '#475569' : '#94a3b8' }}>42мс</span>
+                  </div>
+                </div>
+                <div style={{ background: isDark ? '#07070f' : '#ffffff', padding: '20px', fontFamily: 'JetBrains Mono, monospace', fontSize: 13, lineHeight: 1.8 }}>
+                  <div style={{ color: isDark ? '#475569' : '#94a3b8' }}># O(n) — хэш-таблица</div>
+                  <div style={{ marginTop: 4 }}><span style={{ color: '#a78bfa' }}>def </span><span style={{ color: '#67e8f9' }}>two_sum</span><span style={{ color: isDark ? '#e2e8f0' : '#1a1a2e' }}>(nums, target):</span></div>
+                  <div style={{ paddingLeft: 24, color: isDark ? '#e2e8f0' : '#1a1a2e' }}>seen = {}</div>
+                  <div style={{ paddingLeft: 24 }}><span style={{ color: '#a78bfa' }}>for </span><span style={{ color: '#67e8f9' }}>i, n </span><span style={{ color: '#a78bfa' }}>in </span><span style={{ color: isDark ? '#e2e8f0' : '#1a1a2e' }}>enumerate(nums):</span></div>
+                  <div style={{ paddingLeft: 48 }}><span style={{ color: '#a78bfa' }}>if </span><span style={{ color: isDark ? '#e2e8f0' : '#1a1a2e' }}>target - n </span><span style={{ color: '#a78bfa' }}>in </span><span style={{ color: isDark ? '#e2e8f0' : '#1a1a2e' }}>seen:</span></div>
+                  <div style={{ paddingLeft: 72 }}><span style={{ color: '#a78bfa' }}>return </span><span style={{ color: '#34d399' }}>[seen[target-n], i]</span></div>
+                  <div style={{ paddingLeft: 48, color: isDark ? '#e2e8f0' : '#1a1a2e' }}>seen[n] = i</div>
+                </div>
+              </div>
             </motion.div>
-          </motion.div>
-
-          {/* ── Terminal preview ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 80, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0,  scale: 1 }}
-            transition={{ delay: 0.6, duration: 0.9, ease: [0.16,1,0.3,1] }}
-            className="mt-20 max-w-2xl mx-auto"
-          >
-            <div className="rounded-2xl overflow-hidden"
-              style={{
-                background: 'rgba(8,8,26,0.9)',
-                border: '1px solid rgba(99,102,241,0.2)',
-                boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 50px 120px rgba(0,0,0,0.9), 0 0 80px rgba(99,102,241,0.08)',
-              }}>
-              {/* Window chrome */}
-              <div className="flex items-center gap-2 px-5 py-3.5 border-b"
-                style={{ background:'rgba(255,255,255,0.02)', borderColor:'rgba(255,255,255,0.06)' }}>
-                <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                <div className="w-3 h-3 rounded-full bg-green-500/60" />
-                <span className="ml-3 text-[11px] font-mono text-slate-500 flex-1">solution.py</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="st-ac pill text-[10px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    {lang==='ru'?'Принято':'Accepted'}
-                  </span>
-                  <span className="text-[11px] font-mono text-slate-500">42мс</span>
-                </div>
-              </div>
-              {/* Code */}
-              <div className="p-6 font-mono text-[13px] leading-7">
-                <div className="text-slate-500"># O(n) hash table — two sum</div>
-                <div className="mt-1">
-                  <span className="text-violet-400">def </span>
-                  <span className="text-blue-300">two_sum</span>
-                  <span className="text-slate-300">(nums: list, target: int) → list:</span>
-                </div>
-                <div className="pl-6 text-slate-400">seen = {'{}'}</div>
-                <div className="pl-6">
-                  <span className="text-violet-400">for </span>
-                  <span className="text-blue-200">i, n </span>
-                  <span className="text-violet-400">in </span>
-                  <span className="text-blue-200">enumerate(nums):</span>
-                </div>
-                <div className="pl-12">
-                  <span className="text-violet-400">if </span>
-                  <span className="text-slate-300">target - n </span>
-                  <span className="text-violet-400">in </span>
-                  <span className="text-slate-300">seen:</span>
-                </div>
-                <div className="pl-20">
-                  <span className="text-violet-400">return </span>
-                  <span className="text-emerald-400">[seen[target - n], i]</span>
-                </div>
-                <div className="pl-12 text-slate-300">seen[n] = i</div>
-              </div>
-              {/* Status bar */}
-              <div className="px-5 py-2.5 flex items-center justify-between border-t"
-                style={{ background:'rgba(255,255,255,0.01)', borderColor:'rgba(255,255,255,0.04)' }}>
-                <span className="text-[11px] font-mono text-slate-500">3/3 тестов пройдено</span>
-                <div className="flex gap-1.5">
-                  {[1,2,3].map(i => (
-                    <motion.div key={i} className="w-5 h-5 rounded-md flex items-center justify-center text-emerald-400"
-                      initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.8 + i * 0.1 }}
-                      style={{ background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.2)' }}>
-                      <span className="text-[9px] font-bold">✓</span>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ══ STATS ════════════════════════════════════════════════ */}
-      <section className="py-16 relative" style={{ background:'rgba(8,8,26,0.5)', borderTop:'1px solid rgba(255,255,255,0.05)', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
-        <div className="max-w-4xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {STATS.map(({ v, s, l }, i) => (
-            <motion.div key={l}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08, duration: 0.5, ease: 'easeOut' }}
-            >
-              <div className="text-5xl font-black tracking-tight gradient-text-hero mb-1">
-                {typeof v === 'number' ? <Counter to={v} suffix={s} /> : `${v}${s}`}
-              </div>
-              <div className="text-sm text-slate-500 font-medium">{l}</div>
+      {/* ─── STATS ─────────────────────────────────────────────── */}
+      <section style={{ padding: '60px 24px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}` }}>
+        <div style={{ maxWidth: 700, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, textAlign: 'center' }}>
+          {STATS.map(({ n, l }, i) => (
+            <motion.div key={l} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07, duration: 0.5, ease: 'easeOut' }}>
+              <div style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, letterSpacing: '-0.03em', fontFamily: 'JetBrains Mono, monospace' }} className="gradient-text">{n}</div>
+              <div style={{ fontSize: 13, color: isDark ? '#64748b' : '#94a3b8', marginTop: 4 }}>{l}</div>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ══ FEATURES ═════════════════════════════════════════════ */}
-      <section className="py-28 relative overflow-hidden">
-        <div className="blob blob-indigo w-[600px] h-[600px] opacity-30" style={{ top:'10%', right:'-10%' }} />
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} className="text-center mb-16">
-            <div className="text-xs font-bold tracking-[0.2em] text-indigo-400 uppercase mb-4">
+      {/* ─── FEATURES ──────────────────────────────────────────── */}
+      <section style={{ padding: '96px 24px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: 'center', marginBottom: 60 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#7c3aed', marginBottom: 16 }}>
               {lang==='ru'?'Возможности':'Features'}
             </div>
-            <h2 className="heading-xl text-white mb-4">
-              {lang==='ru'?'Всё для победы':'Everything to'}
-              <br />
-              <span className="gradient-text-hero">{lang==='ru'?'в одном месте':'Win, in one place'}</span>
+            <h2 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+              {lang==='ru'?'Всё необходимое для ':'Everything you need to '}
+              <span className="gradient-text-subtle">{lang==='ru'?'победы':'win'}</span>
             </h2>
-            <p className="text-slate-400 text-lg max-w-xl mx-auto">
-              {lang==='ru'?'Создано программистами для программистов':'Built by competitive programmers, for you.'}
-            </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map(({ icon: Icon, g, title, desc }, i) => (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+            {FEATURES.map(({ Icon, title, desc }, i) => (
               <motion.div key={title}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.06, duration: 0.55, ease: [0.16,1,0.3,1] }}
+                initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.07, duration: 0.5, ease: 'easeOut' }}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="glass-card p-7 group cursor-default"
+                style={{
+                  padding: 28, borderRadius: 16, cursor: 'default',
+                  background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.8)',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                  backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                  transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(124,58,237,0.35)';
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 40px rgba(124,58,237,0.08)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+                }}
               >
-                {/* Icon */}
-                <div className={`inline-flex w-12 h-12 rounded-2xl items-center justify-center mb-5 bg-gradient-to-br ${g} shadow-xl`}>
-                  <Icon size={22} className="text-white" />
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                  <Icon size={20} color="#a78bfa" />
                 </div>
-                {/* Shine line */}
-                <div className="absolute top-0 left-0 right-0 h-px rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{ background:'linear-gradient(90deg,transparent,rgba(129,140,248,0.6),transparent)' }} />
-                <h3 className="text-[15px] font-semibold text-white mb-2 tracking-[-0.01em]">{title}</h3>
-                <p className="text-[13px] text-slate-400 leading-relaxed">{desc}</p>
+                <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: isDark ? '#f1f5f9' : '#0d0d1a' }}>{title}</h3>
+                <p style={{ fontSize: 13, color: isDark ? '#64748b' : '#64748b', lineHeight: 1.7 }}>{desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ══ COMPARISON ═══════════════════════════════════════════ */}
-      <section className="py-24 relative" style={{ background:'rgba(8,8,26,0.4)' }}>
-        <div className="max-w-3xl mx-auto px-6">
-          <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} className="text-center mb-12">
-            <h2 className="heading-xl text-white mb-3">
-              {lang==='ru'?'Почему ':'Why '}
-              <span className="gradient-text-hero">Aetheris?</span>
-            </h2>
-            <p className="text-slate-400">{lang==='ru'?'Честное сравнение':'An honest comparison'}</p>
-          </motion.div>
-          <motion.div initial={{ opacity:0, y:32 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
-            transition={{ duration: 0.6, ease:[0.16,1,0.3,1] }}
-            className="rounded-2xl overflow-hidden"
-            style={{ background:'rgba(8,8,26,0.8)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 40px 80px rgba(0,0,0,0.5)' }}>
-            <div className="grid grid-cols-4 border-b" style={{ borderColor:'rgba(255,255,255,0.06)' }}>
-              <div className="px-5 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">{lang==='ru'?'Функция':'Feature'}</div>
-              {['Aetheris','Codeforces','LeetCode'].map(p => (
-                <div key={p} className={`px-5 py-4 text-center text-[13px] font-bold ${p==='Aetheris'?'text-indigo-400':'text-slate-500'}`}>{p}</div>
-              ))}
-            </div>
-            {CMP.map(([feat,...vals], i) => (
-              <motion.div key={i} initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }} transition={{ delay: i*0.05 }}
-                className="grid grid-cols-4 border-b hover:bg-white/[0.02] transition-colors" style={{ borderColor:'rgba(255,255,255,0.04)' }}>
-                <div className="px-5 py-3.5 text-[13px] text-slate-300">{feat as string}</div>
-                {(vals as boolean[]).map((v, j) => (
-                  <div key={j} className="px-5 py-3.5 flex justify-center">
-                    {v ? <CheckCircle2 size={15} className="text-emerald-400" />
-                       : <div className="w-4 h-px bg-slate-700 mt-2" />}
-                  </div>
-                ))}
+      {/* ─── TOP USERS ─────────────────────────────────────────── */}
+      <section style={{ padding: '60px 24px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}` }}>
+        <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 40 }}>
+            {lang==='ru'?'Топ ':'Top '}
+            <span className="gradient-text">{lang==='ru'?'участников':'Coders'}</span>
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { name: 'algo_master',  rating: 2847, solved: 312, badge: '🥇' },
+              { name: 'cp_grinder',   rating: 2541, solved: 289, badge: '🥈' },
+              { name: 'team_coder',   rating: 2318, solved: 261, badge: '🥉' },
+            ].map(({ name, rating, solved, badge }, i) => (
+              <motion.div key={name}
+                initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4, ease: 'easeOut' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', borderRadius: 14,
+                  background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.8)',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                }}
+              >
+                <span style={{ fontSize: 22, width: 32 }}>{badge}</span>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#fff' }}>
+                  {name[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: isDark ? '#f1f5f9' : '#0d0d1a' }}>@{name}</div>
+                  <div style={{ fontSize: 12, color: isDark ? '#475569' : '#94a3b8' }}>{solved} решено</div>
+                </div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 16 }} className="gradient-text">{rating}</div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* ══ TESTIMONIALS ═════════════════════════════════════════ */}
-      <section className="py-24">
-        <div className="max-w-5xl mx-auto px-6">
-          <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} className="text-center mb-12">
-            <h2 className="heading-xl text-white">
-              {lang==='ru'?'Что говорят ':'What '}
-              <span className="gradient-text-hero">{lang==='ru'?'участники':'coders say'}</span>
-            </h2>
-          </motion.div>
-          <div className="grid md:grid-cols-3 gap-4">
+      {/* ─── TESTIMONIALS ──────────────────────────────────────── */}
+      <section style={{ padding: '80px 24px' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            style={{ fontSize: 32, fontWeight: 800, textAlign: 'center', marginBottom: 40, letterSpacing: '-0.02em' }}>
+            {lang==='ru'?'Что говорят ':'What '}
+            <span className="gradient-text">{lang==='ru'?'участники':'coders say'}</span>
+          </motion.h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
             {[
-              { u:'algo_master', t: lang==='ru'?'Aetheris лучше Codeforces. AI объясняет ошибки как репетитор — понятно и без спойлеров.':'Better than Codeforces. AI explains mistakes like a tutor — clear and without spoilers.' },
-              { u:'cp_grinder',  t: lang==='ru'?'Система дуэлей затягивает. За месяц вырос на 400 рейтинга — реально работает.':'The duel system is addictive. I grew 400 rating in a month — it genuinely works.' },
-              { u:'team_coder',  t: lang==='ru'?'Наконец платформа, которая серьёзно относится к командным контестам. Real-time чат — огонь.':'Finally a platform that takes team contests seriously. Real-time chat is 🔥' },
-            ].map(({ u, t: txt }, i) => (
+              { u:'algo_master', t: lang==='ru'?'Aetheris лучше Codeforces. AI объясняет ошибки как репетитор — понятно и без спойлеров.':'Better than Codeforces. AI explains mistakes clearly without spoilers.' },
+              { u:'cp_grinder',  t: lang==='ru'?'Система дуэлей затягивает. За месяц вырос на 400 рейтинга — реально работает.':'The duel system is addictive. Gained 400 rating in a month.' },
+              { u:'team_coder',  t: lang==='ru'?'Наконец платформа, где командные контесты сделаны правильно.':'Finally a platform that does team contests right.' },
+            ].map(({ u, t: tx }, i) => (
               <motion.div key={u}
-                initial={{ opacity:0, y:28 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
-                transition={{ delay:i*0.1, duration:0.5, ease:[0.16,1,0.3,1] }}
-                whileHover={{ y:-3, transition:{duration:0.2} }}
-                className="glass-card p-6 cursor-default"
+                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5, ease: 'easeOut' }}
+                whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                style={{
+                  padding: 24, borderRadius: 16, cursor: 'default',
+                  background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.8)',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                  backdropFilter: 'blur(10px)',
+                }}
               >
-                <div className="flex gap-0.5 mb-4">
-                  {[1,2,3,4,5].map(n => <Star key={n} size={12} className="text-amber-400 fill-amber-400" />)}
+                <div style={{ display: 'flex', gap: 2, marginBottom: 14 }}>
+                  {[0,1,2,3,4].map(n => <Star key={n} size={12} color="#fbbf24" fill="#fbbf24" />)}
                 </div>
-                <p className="text-[13px] text-slate-300 leading-relaxed mb-5">"{txt}"</p>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
-                    style={{ background:'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                <p style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#4a5568', lineHeight: 1.7, marginBottom: 16 }}>"{tx}"</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
                     {u[0].toUpperCase()}
                   </div>
-                  <span className="text-[13px] font-medium text-slate-400">@{u}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: isDark ? '#64748b' : '#94a3b8' }}>@{u}</span>
                 </div>
               </motion.div>
             ))}
@@ -397,45 +295,39 @@ export function Landing() {
         </div>
       </section>
 
-      {/* ══ CTA ══════════════════════════════════════════════════ */}
-      <section className="py-32 relative overflow-hidden">
-        <div className="absolute inset-0 grid-bg" />
-        <div className="blob blob-indigo w-[800px] h-[800px] opacity-20" style={{ top:'50%', left:'50%', transform:'translate(-50%,-50%)' }} />
-        <div className="absolute inset-0 hero-bg" />
-        <div className="relative max-w-3xl mx-auto px-6 text-center">
-          <motion.div initial={{ opacity:0, y:32 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
-            transition={{ duration:0.7, ease:[0.16,1,0.3,1] }}>
-            <h2 className="display text-white mb-6">
-              {lang==='ru'?'Готов к ':'Ready to'}
-              <br />
-              <span className="gradient-text-hero">{lang==='ru'?'победе?':'Win?'}</span>
-            </h2>
-            <p className="text-slate-400 text-lg mb-10 max-w-md mx-auto">
-              {lang==='ru'?'Присоединяйся бесплатно и начни решать задачи прямо сейчас.':'Join free and start solving problems right now.'}
-            </p>
-            <Link to="/register">
-              <motion.button
-                whileHover={{ scale: 1.03, y: -3 }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center gap-3 px-10 py-4 rounded-2xl text-base font-bold text-white btn-glow cursor-pointer"
-              >
-                {lang==='ru'?'Начать бесплатно':'Get Started Free'}
-                <ArrowRight size={19} />
-              </motion.button>
-            </Link>
-          </motion.div>
-        </div>
+      {/* ─── CTA ───────────────────────────────────────────────── */}
+      <section style={{ padding: '96px 24px', position: 'relative', overflow: 'hidden', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}` }}>
+        <div className="hero-glow-left" style={{ opacity: 0.4 }} />
+        <div className="hero-glow-right" style={{ opacity: 0.3 }} />
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          style={{ position: 'relative', zIndex: 2, maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 'clamp(36px,5vw,64px)', fontWeight: 800, letterSpacing: '-0.04em', marginBottom: 20 }}>
+            {lang==='ru'?'Готов ':'Ready to '}
+            <span className="gradient-text">{lang==='ru'?'побеждать?':'Win?'}</span>
+          </h2>
+          <p style={{ fontSize: 16, color: isDark ? '#94a3b8' : '#4a5568', marginBottom: 32 }}>
+            {lang==='ru'?'Присоединяйся бесплатно прямо сейчас.':'Join for free right now.'}
+          </p>
+          <Link to="/register">
+            <motion.button
+              whileHover={{ scale: 1.03, y: -3 }} whileTap={{ scale: 0.97 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 32px', borderRadius: 14, fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', border: 'none' }}
+              className="btn-primary"
+            >
+              {lang==='ru'?'Начать бесплатно':'Get Started Free'}
+              <ArrowRight size={18} />
+            </motion.button>
+          </Link>
+        </motion.div>
       </section>
 
-      {/* ══ FOOTER ═══════════════════════════════════════════════ */}
-      <footer className="border-t py-8" style={{ borderColor:'rgba(255,255,255,0.06)' }}>
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between gap-4 text-slate-500 text-[12px]">
-          <div className="flex items-center gap-2">
-            <Zap size={12} className="text-indigo-400" />
-            <span className="font-bold text-slate-400">Aetheris</span>
-          </div>
-          <span>© 2025 Aetheris</span>
+      {/* ─── FOOTER ────────────────────────────────────────────── */}
+      <footer style={{ padding: '24px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 1100, margin: '0 auto', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Zap size={13} color="#7c3aed" />
+          <span style={{ fontWeight: 800, fontSize: 13, letterSpacing: '-0.02em' }} className="gradient-text">Aetheris</span>
         </div>
+        <span style={{ fontSize: 12, color: isDark ? '#475569' : '#94a3b8' }}>© 2025 Aetheris. {lang==='ru'?'Все права защищены.':'All rights reserved.'}</span>
       </footer>
     </div>
   );

@@ -3,17 +3,14 @@ import type { HTMLAttributes } from 'react';
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   glow?: boolean;
   hover?: boolean;
+  glass?: boolean;
 }
 
-export function Card({ children, className = '', glow, hover, ...props }: CardProps) {
+export function Card({ children, className = '', glow, hover, glass, ...props }: CardProps) {
+  const base = glass ? 'glass' : 'card-theme surface-transition';
   return (
     <div
-      className={`
-        card-theme surface-transition
-        ${glow ? 'shadow-purple-200/60 dark:shadow-purple-900/30 shadow-md' : ''}
-        ${hover ? 'hover:border-[var(--border-2)] hover:shadow-app-md cursor-pointer' : ''}
-        ${className}
-      `}
+      className={`${base} ${hover || glass ? 'glass-hover' : ''} ${glow ? 'ring-1 ring-purple-500/20' : ''} ${className}`}
       {...props}
     >
       {children}
@@ -23,16 +20,12 @@ export function Card({ children, className = '', glow, hover, ...props }: CardPr
 
 export function CardHeader({ children, className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`p-5 border-b border-[var(--border)] ${className}`} {...props}>
+    <div className={`px-5 py-4 border-b border-[var(--border)] ${className}`} {...props}>
       {children}
     </div>
   );
 }
 
 export function CardBody({ children, className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={`p-5 ${className}`} {...props}>
-      {children}
-    </div>
-  );
+  return <div className={`p-5 ${className}`} {...props}>{children}</div>;
 }
