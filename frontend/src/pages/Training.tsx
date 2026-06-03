@@ -485,8 +485,7 @@ export function Training() {
       const problems = allProblems as ProblemShort[];
 
       if (problems.length === 0) {
-        const diffLabel = difficulty ? ` (сложность: ${difficulty})` : '';
-        setNoProblemsError(`По теме "${topic}"${diffLabel} задач не найдено. Попробуй другую тему или сложность.`);
+        setNoProblemsError(`По теме "${topic}" задач пока нет.`);
         return;
       }
 
