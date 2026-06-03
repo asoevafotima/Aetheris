@@ -4,13 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import {
   Trophy, Code2, Send, MessageSquare, Crown,
-  Snowflake, Clock, Users, CheckCircle, Circle,
+  Snowflake, Users, CheckCircle, Circle,
   AlertCircle, Wifi, WifiOff, Lock, ArrowLeft,
 } from 'lucide-react';
 import { contestsApi, chatApi, submissionsApi } from '../api/endpoints';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { DifficultyBadge } from '../components/ui/Badge';
 import { SkeletonLine } from '../components/ui/Spinner';
 import { formatDistanceToNow, isPast, isFuture, intervalToDuration, format, differenceInMinutes } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -401,7 +400,7 @@ export function ContestDetail() {
   });
 
   // Chat (REST fallback)
-  const { data: apiMessages, refetch: refetchChat } = useQuery({
+  const { data: apiMessages } = useQuery({
     queryKey: ['chat', 'contest', contest?.id],
     queryFn: () => chatApi.contest(contest!.id, 0, 100),
     enabled: !!contest?.id,

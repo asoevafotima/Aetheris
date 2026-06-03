@@ -65,7 +65,7 @@ export function CreateProblem() {
   const [inputFmt, setInputFmt]       = useState('');
   const [outputFmt, setOutputFmt]     = useState('');
   const [constraints, setConstraints] = useState('');
-  const [difficulty, setDifficulty]   = useState('easy');
+  const [difficulty, setDifficulty]   = useState<'easy' | 'medium' | 'hard' | 'expert'>('easy');
   const [diffCode, setDiffCode]       = useState('');
   const [topic, setTopic]             = useState('');
   const [customTopic, setCustomTopic] = useState('');
@@ -212,7 +212,7 @@ export function CreateProblem() {
               <select
                 className="input-theme w-full rounded-xl px-3 py-2.5 text-sm"
                 value={difficulty}
-                onChange={e => setDifficulty(e.target.value)}
+                onChange={e => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard' | 'expert')}
               >
                 {DIFFICULTY_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
