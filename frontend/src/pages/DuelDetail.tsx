@@ -4,8 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import {
-  Swords, Clock, Play, CheckCircle, XCircle,
-  Loader2, Crown, Minus, ArrowLeft, Send, User,
+  Swords, Play, CheckCircle, XCircle,
+  Loader2, Crown, Minus, ArrowLeft, User,
 } from 'lucide-react';
 import { duelsApi, submissionsApi } from '../api/endpoints';
 import { Button } from '../components/ui/Button';

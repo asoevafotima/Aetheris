@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Swords, Plus, Clock, Trophy, X, Check,
+  Swords, Plus, Clock, X, Check,
   Search, Send, ChevronRight, Crown, Minus,
 } from 'lucide-react';
 import { duelsApi, usersApi } from '../api/endpoints';
@@ -358,7 +358,6 @@ function IncomingInvites() {
 
 // ── Главная страница ─────────────────────────────────────────────
 export function Duels() {
-  const qc = useQueryClient();
   const { user } = useAuthStore();
   const [showCreate, setShowCreate] = useState(false);
   const [tab, setTab] = useState<'open' | 'mine'>('open');
