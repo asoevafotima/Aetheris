@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Play, CheckCircle, Circle, Trophy,
@@ -217,7 +217,6 @@ function PracticeScreen({ planId, onBack, onComplete }: {
   onBack: () => void;
   onComplete: () => void;
 }) {
-  const qc = useQueryClient();
   const [activeIdx, setActiveIdx] = useState(0);
 
   const { data: planData } = useQuery({
@@ -228,13 +227,7 @@ function PracticeScreen({ planId, onBack, onComplete }: {
   const { data: itemsData, isLoading } = useQuery({
     queryKey: ['training-items', planId],
     queryFn: () => trainingApi.items(planId),
-  });
-
-  const markMut = useMutation({
-    mutationFn: (itemId: string) => trainingApi.updateItem(itemId, { status: 'completed' }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['training-items', planId] });
-    },
+    refetchInterval: 5000, // автообновление каждые 5 секунд
   });
 
   const items = (itemsData ?? []) as PlanItem[];
@@ -362,24 +355,19 @@ function PracticeScreen({ planId, onBack, onComplete }: {
                   💡 Открой задачу, реши её, затем вернись и отметь как выполненную
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 mt-auto">
+                <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-3)] flex items-center gap-2">
+                  <CheckCircle size={13} className="text-emerald-400 shrink-0" />
+                  Реши задачу — прогресс обновится автоматически
+                </div>
+
+                <div className="flex flex-col gap-3 mt-auto">
                   {activeItem.problem?.slug && (
-                    <Link to={`/problems/${activeItem.problem.slug}`} className="flex-1" target="_blank" rel="noopener noreferrer">
+                    <Link to={`/problems/${activeItem.problem.slug}`} target="_blank" rel="noopener noreferrer">
                       <Button icon={<Play size={15} />} className="w-full" size="lg">
                         Открыть задачу
                       </Button>
                     </Link>
                   )}
-                  <Button
-                    variant="outline"
-                    icon={<CheckCircle size={15} />}
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => markMut.mutate(activeItem.id)}
-                    loading={markMut.isPending}
-                  >
-                    Отметить как решено
-                  </Button>
                 </div>
 
                 {/* Навигация */}

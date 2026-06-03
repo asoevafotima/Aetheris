@@ -256,6 +256,7 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
 
         _update_contest_standings(db, sub)
         _update_duel(db, sub, final_status, score_pct)
+        _update_training(db, sub, final_status)
 
     except Exception as exc:
         try:
@@ -284,6 +285,29 @@ def _update_duel(db, sub, final_status, score_pct: float):
         solved = (final_status == SubmissionStatus.accepted)
         from duels.crud import record_submission
         record_submission(db, duel.id, sub.user_id, solved, score_pct)
+    except Exception:
+        pass
+
+
+def _update_training(db, sub, final_status):
+    """Auto-complete training plan item when problem is solved."""
+    try:
+        from submissions.models import SubmissionStatus
+        if final_status != SubmissionStatus.accepted:
+            return
+        from training_plan_items.models import TrainingPlanItem, ItemStatus
+        from training_plans.models import TrainingPlan
+        item = db.query(TrainingPlanItem).join(
+            TrainingPlan, TrainingPlan.id == TrainingPlanItem.plan_id
+        ).filter(
+            TrainingPlanItem.problem_id == sub.problem_id,
+            TrainingPlan.user_id == sub.user_id,
+            TrainingPlanItem.status != ItemStatus.completed,
+        ).first()
+        if item:
+            item.status = ItemStatus.completed
+            item.completed_at = datetime.utcnow()
+            db.commit()
     except Exception:
         pass
 
