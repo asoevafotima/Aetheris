@@ -48,6 +48,8 @@ export const problemsApi = {
 export const testCasesApi = {
   forProblem: (problemId: string) =>
     api.get(`/test-cases/problem/${problemId}/all`).then(r => r.data),
+  samples: (problemId: string) =>
+    api.get(`/test-cases/problem/${problemId}`).then(r => r.data),
   create: (data: { problem_id: string; input_data: string; expected_output: string; is_sample?: boolean; order_num?: number; score?: number }) =>
     api.post(`/test-cases/`, data).then(r => r.data),
   update: (id: string, data: Partial<{ input_data: string; expected_output: string; is_sample: boolean; order_num: number; score: number }>) =>
@@ -227,8 +229,17 @@ export const visApi = {
 // Training plans
 export const trainingApi = {
   list: () => api.get<TrainingPlan[]>('/training-plans/').then(r => r.data),
-  create: (data: Partial<TrainingPlan>) =>
+  get: (id: string) => api.get<TrainingPlan>(`/training-plans/${id}`).then(r => r.data),
+  create: (data: { title: string; description?: string; is_ai_generated?: boolean }) =>
     api.post<TrainingPlan>('/training-plans/', data).then(r => r.data),
+  update: (id: string, data: { is_active?: boolean }) =>
+    api.patch<TrainingPlan>(`/training-plans/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/training-plans/${id}`),
   items: (planId: string) =>
     api.get(`/training-plan-items/plan/${planId}`).then(r => r.data),
+  addItem: (data: { plan_id: string; problem_id: string; order_num: number }) =>
+    api.post('/training-plan-items/', data).then(r => r.data),
+  updateItem: (itemId: string, data: { status: string }) =>
+    api.patch(`/training-plan-items/${itemId}`, data).then(r => r.data),
+  deleteItem: (itemId: string) => api.delete(`/training-plan-items/${itemId}`),
 };

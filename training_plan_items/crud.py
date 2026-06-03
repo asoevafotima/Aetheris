@@ -15,7 +15,10 @@ def get_item_by_id(db: Session, item_id: uuid.UUID):
     return db.query(TrainingPlanItem).filter(TrainingPlanItem.id == item_id).first()
 
 def get_items_by_plan(db: Session, plan_id: uuid.UUID):
-    return db.query(TrainingPlanItem).filter(
+    from sqlalchemy.orm import selectinload
+    return db.query(TrainingPlanItem).options(
+        selectinload(TrainingPlanItem.problem)
+    ).filter(
         TrainingPlanItem.plan_id == plan_id
     ).order_by(TrainingPlanItem.order_num).all()
 

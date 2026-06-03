@@ -13,6 +13,14 @@ def my_plans(db: Session = Depends(get_db),
              current_user: User = Depends(get_current_user)):
     return crud.get_plans_by_user(db, current_user.id)
 
+@router.get("/{plan_id}", response_model=schemas.TrainingPlanResponse)
+def get_plan(plan_id: UUID, db: Session = Depends(get_db),
+             current_user: User = Depends(get_current_user)):
+    plan = crud.get_plan_by_id(db, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return plan
+
 @router.post("/", response_model=schemas.TrainingPlanResponse, status_code=201)
 def create_plan(data: schemas.TrainingPlanCreate, db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)):

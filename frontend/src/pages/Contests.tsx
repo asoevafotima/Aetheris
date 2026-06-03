@@ -6,7 +6,7 @@ import {
   Trophy, Calendar, ArrowRight, Clock, Plus, X,
   Lock, Globe, Search, CheckSquare, Square, AlertCircle,
 } from 'lucide-react';
-import { contestsApi, problemsApi } from '../api/endpoints';
+import { contestsApi, problemsApi, testCasesApi } from '../api/endpoints';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Card, CardBody } from '../components/ui/Card';
@@ -133,6 +133,21 @@ function defaultDates() {
   return { starts_at: toInputDT(start), ends_at: toInputDT(end) };
 }
 
+// ─── Inline new problem form ────────────────────────────────────
+interface NewProblemForm {
+  title: string; description: string; input_format: string;
+  output_format: string; constraints: string;
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+  tests: { input: string; output: string }[];
+  [key: string]: string | { input: string; output: string }[];
+}
+
+const EMPTY_PROBLEM: NewProblemForm = {
+  title: '', description: '', input_format: '', output_format: '',
+  constraints: '', difficulty: 'easy',
+  tests: [{ input: '', output: '' }],
+};
+
 // ─── Create contest modal ──────────────────────────────────────
 function CreateContestModal({ onClose }: { onClose: () => void }) {
   const navigate   = useNavigate();
@@ -140,6 +155,8 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [problemSearch, setProblemSearch] = useState('');
   const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
+  const [showNewProblem, setShowNewProblem] = useState(false);
+  const [newProblem, setNewProblem] = useState<NewProblemForm>(EMPTY_PROBLEM);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -148,9 +165,52 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
     max_participants: '',
   });
 
-  const { data: allProblems } = useQuery({
+  const { data: allProblems, refetch: refetchProblems } = useQuery({
     queryKey: ['problems', 'all-for-select'],
     queryFn: () => problemsApi.list({ limit: 200 }),
+  });
+
+  const createProblemMut = useMutation({
+    mutationFn: async () => {
+      if (!newProblem.title.trim()) throw new Error('Введите название задачи');
+      if (!newProblem.description.trim()) throw new Error('Введите условие задачи');
+      if (!newProblem.input_format.trim()) throw new Error('Введите формат ввода');
+      if (!newProblem.output_format.trim()) throw new Error('Введите формат вывода');
+      if (!newProblem.constraints.trim()) throw new Error('Введите ограничения');
+      const validTests = newProblem.tests.filter(t => t.input.trim() && t.output.trim());
+      if (!validTests.length) throw new Error('Добавьте хотя бы один тест');
+
+      const problem = await problemsApi.create({
+        title: newProblem.title.trim(),
+        description: newProblem.description.trim(),
+        input_format: newProblem.input_format.trim(),
+        output_format: newProblem.output_format.trim(),
+        constraints: newProblem.constraints.trim(),
+        difficulty: newProblem.difficulty,
+        is_public: false, // скрыта пока контест не завершён
+      });
+      for (let i = 0; i < validTests.length; i++) {
+        await testCasesApi.create({
+          problem_id: problem.id,
+          input_data: validTests[i].input,
+          expected_output: validTests[i].output,
+          is_sample: i < 2,
+          order_num: i,
+          score: 1,
+        });
+      }
+      return problem;
+    },
+    onSuccess: (problem) => {
+      setSelectedProblems(prev => [...prev, problem.id]);
+      setNewProblem(EMPTY_PROBLEM);
+      setShowNewProblem(false);
+      refetchProblems();
+    },
+    onError: (e: unknown) => {
+      const msg = (e as { message?: string })?.message;
+      setError(msg ?? 'Ошибка создания задачи');
+    },
   });
 
   const filtered = (allProblems ?? []).filter((p: ProblemShort) =>
@@ -336,6 +396,96 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
                 onChange={e => setProblemSearch(e.target.value)}
               />
             </div>
+            {/* Кнопка создания новой задачи */}
+            <button
+              type="button"
+              onClick={() => setShowNewProblem(v => !v)}
+              className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors cursor-pointer"
+            >
+              <Plus size={14} />
+              {showNewProblem ? 'Скрыть форму' : 'Создать новую задачу для этого контеста'}
+            </button>
+
+            {/* Inline форма создания задачи */}
+            {showNewProblem && (
+              <div className="border border-purple-500/30 rounded-xl p-4 bg-purple-500/5 flex flex-col gap-3">
+                <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Новая задача</p>
+                {[
+                  { key: 'title',         label: 'Название *',              rows: 1  },
+                  { key: 'description',   label: 'Условие *',               rows: 3  },
+                  { key: 'input_format',  label: 'Формат входных данных *',  rows: 2  },
+                  { key: 'output_format', label: 'Формат выходных данных *', rows: 2  },
+                  { key: 'constraints',   label: 'Ограничения *',            rows: 1  },
+                ].map(({ key, label, rows }) => (
+                  <div key={key} className="flex flex-col gap-1">
+                    <label className="text-xs text-[var(--text-2)] font-medium">{label}</label>
+                    {rows === 1 ? (
+                      <input
+                        className="input-theme w-full rounded-lg px-3 py-2 text-sm"
+                        value={(newProblem as Record<string, string>)[key]}
+                        onChange={e => setNewProblem(p => ({ ...p, [key]: e.target.value }))}
+                      />
+                    ) : (
+                      <textarea
+                        rows={rows}
+                        className="input-theme w-full rounded-lg px-3 py-2 text-sm resize-none font-mono"
+                        value={(newProblem as Record<string, string>)[key]}
+                        onChange={e => setNewProblem(p => ({ ...p, [key]: e.target.value }))}
+                      />
+                    )}
+                  </div>
+                ))}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-[var(--text-2)] font-medium">Сложность</label>
+                  <select
+                    className="input-theme w-full rounded-lg px-3 py-2 text-sm"
+                    value={newProblem.difficulty}
+                    onChange={e => setNewProblem(p => ({ ...p, difficulty: e.target.value as 'easy' | 'medium' | 'hard' | 'expert' }))}
+                  >
+                    <option value="easy">Лёгкая</option>
+                    <option value="medium">Средняя</option>
+                    <option value="hard">Сложная</option>
+                    <option value="expert">Эксперт</option>
+                  </select>
+                </div>
+                {/* Тесты */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-[var(--text-2)] font-medium">Тест-кейсы *</label>
+                    <button
+                      type="button"
+                      onClick={() => setNewProblem(p => ({ ...p, tests: [...p.tests, { input: '', output: '' }] }))}
+                      className="text-xs text-purple-400 hover:text-purple-300 cursor-pointer flex items-center gap-1"
+                    >
+                      <Plus size={11} /> Добавить тест
+                    </button>
+                  </div>
+                  {newProblem.tests.map((tc, i) => (
+                    <div key={i} className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-[10px] text-[var(--text-3)] mb-1">Вход #{i+1}</p>
+                        <textarea rows={2} className="input-theme w-full rounded-lg px-2 py-1.5 text-xs font-mono resize-none"
+                          value={tc.input} onChange={e => setNewProblem(p => ({ ...p, tests: p.tests.map((t, j) => j === i ? { ...t, input: e.target.value } : t) }))} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[var(--text-3)] mb-1">Выход #{i+1}</p>
+                        <textarea rows={2} className="input-theme w-full rounded-lg px-2 py-1.5 text-xs font-mono resize-none"
+                          value={tc.output} onChange={e => setNewProblem(p => ({ ...p, tests: p.tests.map((t, j) => j === i ? { ...t, output: e.target.value } : t) }))} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => createProblemMut.mutate()}
+                  loading={createProblemMut.isPending}
+                  icon={<Plus size={13} />}
+                >
+                  Создать и добавить в контест
+                </Button>
+              </div>
+            )}
+
             <div className="border border-[var(--border)] rounded-xl overflow-hidden max-h-52 overflow-y-auto">
               {filtered.length === 0 ? (
                 <p className="p-4 text-center text-[var(--text-3)] text-sm">Задачи не найдены</p>

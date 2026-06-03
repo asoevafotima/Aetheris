@@ -70,7 +70,7 @@ export function Problems() {
             <h1 className="text-3xl font-bold text-app-1 mb-1">{t.problems.title}</h1>
             <p className="text-app-2">{t.problems.subtitle}</p>
           </div>
-          {user && (
+          {(user?.role === 'admin' || user?.role === 'moderator') && (
             <Link to="/problems/create">
               <Button icon={<Plus size={15} />}>Создать задачу</Button>
             </Link>

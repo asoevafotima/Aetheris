@@ -10,6 +10,14 @@ class ItemStatus(str, Enum):
     completed = "completed"
     skipped = "skipped"
 
+class ProblemBrief(BaseModel):
+    id: UUID
+    title: str
+    slug: str
+    difficulty: str
+    class Config:
+        from_attributes = True
+
 class TrainingPlanItemCreate(BaseModel):
     plan_id: UUID
     problem_id: UUID
@@ -23,9 +31,10 @@ class TrainingPlanItemResponse(BaseModel):
     id: UUID
     plan_id: UUID
     problem_id: UUID
+    problem: Optional[ProblemBrief] = None
     order_num: int
     status: ItemStatus
-    completed_at: Optional[datetime]
+    completed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

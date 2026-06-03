@@ -3,8 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import { Play, Clock, Database, BarChart2, Bot, ChevronDown, ChevronUp, CheckCircle, XCircle, Loader2, Lightbulb, RefreshCw } from 'lucide-react';
-import { problemsApi, submissionsApi, aiApi } from '../api/endpoints';
+import { Play, Clock, Database, BarChart2, Bot, ChevronDown, ChevronUp, CheckCircle, XCircle, Loader2, Lightbulb, RefreshCw, ShieldOff } from 'lucide-react';
+import { problemsApi, submissionsApi, aiApi, testCasesApi } from '../api/endpoints';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Input';
 import { DifficultyBadge, StatusBadge } from '../components/ui/Badge';
@@ -75,6 +75,12 @@ export function ProblemDetail() {
     },
   });
 
+  const { data: sampleTests } = useQuery({
+    queryKey: ['sample-tests', problem?.id],
+    queryFn: () => testCasesApi.samples(problem!.id),
+    enabled: !!problem?.id,
+  });
+
   const hintMut     = useMutation({ mutationFn: () => aiApi.hint({ problem_id: problem!.id, hint_type: hintType, submission_id: lastSubId ?? undefined }) });
   const analysisMut = useMutation({ mutationFn: () => aiApi.analyze({ submission_id: lastSubId!, analysis_type: 'full' }) });
 
@@ -90,8 +96,8 @@ export function ProblemDetail() {
       {/* Левая панель */}
       <div className="w-[45%] flex flex-col border-r border-slate-200 overflow-hidden bg-white">
         <div className="flex border-b border-slate-200 bg-slate-50 shrink-0">
-          {(['problem', 'submissions', 'ai'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
+          {(['problem', 'submissions', ...(contestId ? [] : ['ai'])] as const).map(t => (
+            <button key={t} onClick={() => setTab(t as typeof tab)}
               className={`px-5 py-3 text-sm font-medium transition-colors cursor-pointer border-b-2 ${
                 tab === t ? 'border-purple-500 text-purple-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
@@ -119,6 +125,29 @@ export function ProblemDetail() {
               <Section title="Формат ввода"><p className="text-slate-700 text-sm leading-relaxed">{problem.input_format}</p></Section>
               <Section title="Формат вывода"><p className="text-slate-700 text-sm leading-relaxed">{problem.output_format}</p></Section>
               <Section title="Ограничения"><p className="text-slate-700 text-sm font-mono leading-relaxed">{problem.constraints}</p></Section>
+              {sampleTests && (sampleTests as { id: string; input_data: string; expected_output: string }[]).length > 0 && (
+                <Section title="Примеры">
+                  <div className="flex flex-col gap-3">
+                    {(sampleTests as { id: string; input_data: string; expected_output: string }[]).slice(0, 3).map((tc, i) => (
+                      <div key={tc.id} className="rounded-lg border border-slate-200 overflow-hidden">
+                        <div className="bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500 border-b border-slate-200">
+                          Пример {i + 1}
+                        </div>
+                        <div className="grid grid-cols-2 divide-x divide-slate-200">
+                          <div className="p-3">
+                            <p className="text-xs text-slate-400 mb-1 font-medium">Входные данные</p>
+                            <pre className="text-xs font-mono text-slate-800 whitespace-pre-wrap">{tc.input_data}</pre>
+                          </div>
+                          <div className="p-3">
+                            <p className="text-xs text-slate-400 mb-1 font-medium">Выходные данные</p>
+                            <pre className="text-xs font-mono text-slate-800 whitespace-pre-wrap">{tc.expected_output}</pre>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
             </motion.div>
           )}
 
@@ -130,6 +159,12 @@ export function ProblemDetail() {
                 : mySubmissions?.map(sub => <SubmissionRow key={sub.id} sub={sub} />)
               }
             </motion.div>
+          )}
+
+          {contestId && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs">
+              <ShieldOff size={13} /> AI-помощник недоступен во время контеста
+            </div>
           )}
 
           {tab === 'ai' && (
