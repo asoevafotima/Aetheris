@@ -1,14 +1,28 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import {
   Zap, Code2, Trophy, Swords, Bot, BarChart2,
-  Users, ArrowRight, Star, CheckCircle2,
+  Users, ArrowRight, CheckCircle2, Star,
 } from 'lucide-react';
 import { useThemeStore } from '../store/themeStore';
 import { useT } from '../i18n';
 
-const fade    = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' as const } } };
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
+/* ── Staggered reveal variants ── */
+const FADE_UP = { hidden: { opacity: 0, y: 32 }, show: { opacity: 1, y: 0 } };
+const STAGGER = { hidden: {}, show: { transition: { staggerChildren: 0.09 } } };
+
+/* ── Animated counter ── */
+function Counter({ to, suffix = '' }: { to: number | string; suffix?: string }) {
+  if (typeof to === 'string') return <span>{to}</span>;
+  const count   = useMotionValue(0);
+  const display = useTransform(count, v => Math.round(v).toLocaleString() + suffix);
+  useEffect(() => {
+    const ctrl = animate(count, to, { duration: 1.5, ease: 'easeOut' });
+    return () => ctrl.stop();
+  }, [to]);
+  return <motion.span>{display}</motion.span>;
+}
 
 export function Landing() {
   const { theme, toggleTheme, lang, toggleLang } = useThemeStore();
@@ -16,328 +30,366 @@ export function Landing() {
   const isDark = theme === 'dark';
 
   const FEATURES = [
-    { icon: Code2,     gradient: 'from-purple-500 to-violet-600', title: lang === 'ru' ? 'Умный судья'        : 'Smart Judge',      desc: lang === 'ru' ? 'Python и C++, реальное выполнение кода, детальный разбор каждого теста.'      : 'Real-time Python & C++ execution with per-test analysis.' },
-    { icon: Trophy,    gradient: 'from-yellow-500 to-orange-500', title: lang === 'ru' ? 'Живые контесты'     : 'Live Contests',    desc: lang === 'ru' ? 'ICPC-стиль, таблица обновляется в реальном времени, заморозка последних 30 мин.' : 'ICPC-style contests with live leaderboard and standings freeze.' },
-    { icon: Swords,    gradient: 'from-red-500 to-rose-600',      title: lang === 'ru' ? 'Дуэли 1 на 1'       : '1v1 Duels',        desc: lang === 'ru' ? 'Вызывай друзей на поединок — кто первый решит задачу по выбранной теме.'         : 'Challenge friends to head-to-head battles on chosen difficulty.' },
-    { icon: Bot,       gradient: 'from-cyan-500 to-sky-600',      title: lang === 'ru' ? 'AI Наставник'       : 'AI Mentor',        desc: lang === 'ru' ? 'Groq LLM объясняет ошибки на русском — без спойлеров, только направление.'     : 'Groq LLM explains errors without spoilers — only hints.' },
-    { icon: BarChart2, gradient: 'from-emerald-500 to-teal-600',  title: lang === 'ru' ? 'Визуализации'       : 'Visualizations',   desc: lang === 'ru' ? 'Пошаговые анимации BFS, DFS, сортировок и других алгоритмов.'                  : 'Animated step-by-step algorithm visualizations.' },
-    { icon: Users,     gradient: 'from-pink-500 to-fuchsia-600',  title: lang === 'ru' ? 'Командные олимпиады': 'Team Olympiads',   desc: lang === 'ru' ? 'Создай команду, общайтесь в real-time чате и побеждайте вместе.'                : 'Create teams, chat in real-time, and conquer together.' },
+    { icon: Code2,     g: 'from-indigo-500 to-violet-600', title: lang==='ru'?'Умный судья':'Smart Judge',           desc: lang==='ru'?'Python и C++. Реальное выполнение. Детальный разбор каждого теста с AI-объяснением.':'Python & C++. Real execution. Per-test AI analysis.' },
+    { icon: Trophy,    g: 'from-amber-400  to-orange-500',  title: lang==='ru'?'Живые контесты':'Live Contests',      desc: lang==='ru'?'ICPC-стиль. Таблица обновляется мгновенно через WebSocket. Заморозка за 30 минут.':'ICPC-style. Live standings via WebSocket. Final 30-min freeze.' },
+    { icon: Swords,    g: 'from-rose-500   to-pink-600',    title: lang==='ru'?'Дуэли 1 на 1':'1v1 Duels',           desc: lang==='ru'?'Вызывай друзей. Случайная задача по теме. Кто быстрее — тот победил.':'Challenge friends. Random problem by topic. Fastest wins.' },
+    { icon: Bot,       g: 'from-cyan-400   to-sky-600',     title: lang==='ru'?'AI Наставник':'AI Mentor',           desc: lang==='ru'?'Groq LLM. Объясняет ошибки на русском. Без спойлеров — только направление мысли.':'Groq LLM. Explains errors in your language. No spoilers.' },
+    { icon: BarChart2, g: 'from-teal-400   to-emerald-600', title: lang==='ru'?'Визуализации':'Visualizations',      desc: lang==='ru'?'BFS, DFS, сортировки — пошаговые анимированные примеры для понимания алгоритмов.':'BFS, DFS, sorting — animated step-by-step algorithm demos.' },
+    { icon: Users,     g: 'from-fuchsia-500 to-purple-600', title: lang==='ru'?'Командные олимпиады':'Team Olympiads', desc: lang==='ru'?'Создай команду. Real-time чат. Соревнуйтесь вместе в командных контестах.':'Create teams. Real-time chat. Compete together in team contests.' },
   ];
 
   const STATS = [
-    { value: '10+', label: lang === 'ru' ? 'Задач'      : 'Problems'   },
-    { value: '5+',  label: lang === 'ru' ? 'Контестов'  : 'Contests'   },
-    { value: '<1с', label: lang === 'ru' ? 'Проверка'   : 'Judge Time' },
-    { value: 'AI',  label: lang === 'ru' ? 'Наставник'  : 'Mentor'     },
+    { v: 10, s: '+', l: lang==='ru'?'задач':'problems' },
+    { v: 5,  s: '+', l: lang==='ru'?'контестов':'contests' },
+    { v: '<1',  s: 'с', l: lang==='ru'?'проверка кода':'judge time' },
+    { v: 'AI', s: '', l: lang==='ru'?'наставник':'mentor' },
   ];
 
-  const CODE_LINES = [
-    { tokens: [{ t: '# O(n) — хэш-таблица', c: 'text-[var(--text-3)]' }] },
-    { tokens: [] },
-    { tokens: [{ t: 'def ', c: 'text-purple-400' }, { t: 'two_sum', c: 'text-cyan-400' }, { t: '(nums, target):', c: 'text-[var(--text-2)]' }] },
-    { tokens: [{ t: '    ', c: '' }, { t: 'seen', c: 'text-[var(--text-1)]' }, { t: ' = ', c: 'text-purple-400' }, { t: '{}', c: 'text-yellow-400' }] },
-    { tokens: [{ t: '    ', c: '' }, { t: 'for ', c: 'text-purple-400' }, { t: 'i, n ', c: 'text-[var(--text-1)]' }, { t: 'in ', c: 'text-purple-400' }, { t: 'enumerate(nums):', c: 'text-[var(--text-2)]' }] },
-    { tokens: [{ t: '        ', c: '' }, { t: 'if ', c: 'text-purple-400' }, { t: 'target - n ', c: 'text-[var(--text-1)]' }, { t: 'in ', c: 'text-purple-400' }, { t: 'seen:', c: 'text-[var(--text-2)]' }] },
-    { tokens: [{ t: '            ', c: '' }, { t: 'return ', c: 'text-purple-400' }, { t: '[seen[target - n], i]', c: 'text-emerald-400' }] },
-    { tokens: [{ t: '        ', c: '' }, { t: 'seen', c: 'text-[var(--text-1)]' }, { t: '[n]', c: 'text-yellow-400' }, { t: ' = i', c: 'text-[var(--text-2)]' }] },
+  const CMP = [
+    [lang==='ru'?'AI наставник':'AI Mentor',       true,false,false],
+    [lang==='ru'?'Дуэли 1v1':'1v1 Duels',          true,false,false],
+    [lang==='ru'?'Командные контесты':'Team Contests',true,true,false],
+    [lang==='ru'?'WebSocket standings':'Live Standings',true,false,false],
+    [lang==='ru'?'Открытый исходник':'Open Source', true,false,false],
   ];
 
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: '#050508', color: '#e2e8f0' }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ background: '#030309', color: '#f1f5f9' }}>
 
-      {/* ── Navbar ── */}
-      <nav className="fixed top-0 w-full z-50 backdrop-blur-xl" style={{ background: 'rgba(5,5,8,0.8)', borderBottom: '1px solid rgba(26,26,46,0.8)' }}>
+      {/* ══ NAV ══════════════════════════════════════════════════ */}
+      <nav className="fixed top-0 w-full z-50" style={{
+        background: 'rgba(3,3,9,0.75)',
+        backdropFilter: 'blur(24px) saturate(1.4)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}>
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-purple-600 flex items-center justify-center glow-pulse shadow-lg shadow-purple-600/40">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center glow-pulse"
+              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
               <Zap size={14} className="text-white" />
             </div>
-            <span className="font-black text-base gradient-text">Aetheris</span>
+            <span className="font-black text-[15px] tracking-[-0.03em]"
+              style={{ background:'linear-gradient(135deg,#e0e7ff,#a78bfa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+              Aetheris
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={toggleTheme}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-all cursor-pointer text-base">
+          <div className="flex items-center gap-1.5">
+            <button onClick={toggleTheme} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-all cursor-pointer text-sm">
               {isDark ? '☀️' : '🌙'}
             </button>
-            <button onClick={toggleLang}
-              className="h-8 px-2.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white hover:bg-white/8 transition-all cursor-pointer">
+            <button onClick={toggleLang} className="h-8 px-3 rounded-xl text-[11px] font-bold tracking-wider text-slate-400 hover:text-white hover:bg-white/8 transition-all cursor-pointer">
               {lang.toUpperCase()}
             </button>
             <Link to="/login">
-              <button className="h-8 px-4 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/8 transition-all cursor-pointer">
+              <button className="h-9 px-4 rounded-xl text-[13px] font-medium text-slate-300 hover:text-white hover:bg-white/6 transition-all cursor-pointer">
                 {t.auth.login}
               </button>
             </Link>
             <Link to="/register">
-              <button className="h-8 px-4 rounded-lg text-sm font-semibold text-white btn-primary-glow cursor-pointer">
-                {lang === 'ru' ? 'Начать' : 'Get Started'}
+              <button className="h-9 px-5 rounded-xl text-[13px] font-semibold text-white btn-glow cursor-pointer">
+                {lang==='ru'?'Начать':'Get Started'}
               </button>
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* ── Hero ── */}
-      <section className="relative min-h-screen flex items-center pt-14 overflow-hidden">
-        {/* Background mesh */}
+      {/* ══ HERO ═════════════════════════════════════════════════ */}
+      <section className="relative min-h-screen flex items-center overflow-hidden pt-14">
+        {/* Grid */}
+        <div className="absolute inset-0 grid-bg opacity-100" />
+
+        {/* Blobs */}
+        <div className="blob blob-indigo w-[700px] h-[700px]" style={{ top: '-10%', left: '-5%' }} />
+        <div className="blob blob-violet w-[500px] h-[500px]" style={{ bottom: '0',  right: '-5%' }} />
+        <div className="blob blob-cyan   w-[400px] h-[400px]" style={{ top: '60%',  left: '40%'  }} />
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 hero-bg" />
+
+        {/* Vignette */}
         <div className="absolute inset-0" style={{
-          backgroundImage: `
-            linear-gradient(rgba(124,58,237,0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(124,58,237,0.05) 1px, transparent 1px)
-          `,
-          backgroundSize: '48px 48px',
+          background: 'radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(3,3,9,0.7) 100%)',
         }} />
-        {/* Orbs */}
-        <div className="orb-1" style={{ top: '15%', left: '5%' }} />
-        <div className="orb-2" style={{ bottom: '10%', right: '5%' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-[0.03]"
-          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)' }} />
 
-        <div className="relative max-w-6xl mx-auto px-6 py-28 w-full">
-          <motion.div initial="hidden" animate="show" variants={stagger} className="flex flex-col items-center text-center gap-7">
+        <div className="relative max-w-6xl mx-auto px-6 py-32 w-full">
+          <motion.div initial="hidden" animate="show" variants={STAGGER} className="flex flex-col items-center text-center gap-8">
 
-            {/* Badge */}
-            <motion.div variants={fade}>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold border border-purple-500/30 bg-purple-500/8 text-purple-300">
-                <Zap size={11} className="text-purple-400" />
-                {lang === 'ru' ? 'Powered by Groq AI · Бета' : 'Powered by Groq AI · Beta'}
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              </span>
+            {/* Beta pill */}
+            <motion.div variants={FADE_UP}>
+              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-[12px] font-semibold"
+                style={{ background:'rgba(99,102,241,0.1)', border:'1px solid rgba(99,102,241,0.25)', color:'#a5b4fc' }}>
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                {lang==='ru'?'Powered by Groq AI · Бета':'Powered by Groq AI · Beta'}
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              </div>
             </motion.div>
 
-            {/* Headline */}
-            <motion.h1 variants={fade} className="text-5xl md:text-7xl lg:text-8xl font-black leading-[1.05] tracking-tight">
-              {lang === 'ru' ? (
-                <>
-                  <span className="gradient-text">Олимпиадное</span>
-                  <br />
-                  <span style={{ color: '#e2e8f0' }}>программирование</span>
-                  <br />
-                  <span className="gradient-text-warm">нового уровня</span>
-                </>
-              ) : (
-                <>
-                  <span style={{ color: '#e2e8f0' }}>The </span>
-                  <span className="gradient-text">Future</span>
-                  <span style={{ color: '#e2e8f0' }}> of</span>
-                  <br />
-                  <span className="gradient-text-warm">Competitive Programming</span>
-                </>
-              )}
-            </motion.h1>
+            {/* Main headline */}
+            <motion.div variants={FADE_UP} className="max-w-4xl">
+              <h1 className="display">
+                {lang === 'ru' ? (
+                  <>
+                    <span className="gradient-text-hero block">Олимпиадное</span>
+                    <span style={{ color: 'rgba(241,245,249,0.9)' }}>программирование</span>
+                    <br />
+                    <span className="gradient-text-hero">нового уровня</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="gradient-text-hero">Competitive</span>
+                    <br />
+                    <span style={{ color: 'rgba(241,245,249,0.9)' }}>Programming</span>{' '}
+                    <span className="gradient-text-hero">Reimagined</span>
+                  </>
+                )}
+              </h1>
+            </motion.div>
 
             {/* Subtitle */}
-            <motion.p variants={fade} className="text-lg md:text-xl max-w-2xl leading-relaxed text-slate-400">
-              {lang === 'ru'
-                ? 'Лучше Codeforces по интерфейсу. Лучше LeetCode по функциям. AI-наставник, дуэли, командные контесты — всё в одном месте.'
-                : 'Better UI than Codeforces. More features than LeetCode. AI mentoring, duels, team contests — all in one place.'}
+            <motion.p variants={FADE_UP} className="text-lg md:text-xl max-w-2xl leading-relaxed text-slate-400 font-light">
+              {lang==='ru'
+                ? 'Лучше Codeforces по интерфейсу. Мощнее LeetCode по функциям. AI-наставник, дуэли и командные контесты — всё в одном месте.'
+                : 'Better UI than Codeforces. More powerful than LeetCode. AI mentor, duels, team contests — all in one place.'}
             </motion.p>
 
             {/* CTA */}
-            <motion.div variants={fade} className="flex flex-wrap items-center justify-center gap-3">
+            <motion.div variants={FADE_UP} className="flex flex-wrap items-center justify-center gap-3">
               <Link to="/register">
-                <button className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold text-white btn-primary-glow cursor-pointer">
-                  {lang === 'ru' ? 'Начать бесплатно' : 'Start for Free'}
-                  <ArrowRight size={18} />
-                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-[15px] font-bold text-white cursor-pointer btn-glow"
+                >
+                  {lang==='ru'?'Начать бесплатно':'Start for Free'}
+                  <ArrowRight size={17} />
+                </motion.button>
               </Link>
               <Link to="/login">
-                <button className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold btn-outline-glow cursor-pointer">
-                  {lang === 'ru' ? 'Войти' : 'Sign In'}
-                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-[15px] font-semibold cursor-pointer btn-ghost-border"
+                >
+                  {lang==='ru'?'Войти':'Sign In'}
+                </motion.button>
               </Link>
             </motion.div>
 
-            {/* Languages */}
-            <motion.div variants={fade} className="flex flex-wrap justify-center gap-2 mt-1">
-              {['Python', 'C++'].map(l => (
-                <span key={l} className="px-3 py-1 text-xs rounded-full border border-[#1a1a2e] bg-[#0d0d18] text-slate-400 font-mono">{l}</span>
+            {/* Language tags */}
+            <motion.div variants={FADE_UP} className="flex flex-wrap justify-center gap-2">
+              {['Python 3', 'C++17'].map(l => (
+                <span key={l} className="px-3 py-1.5 rounded-full text-[12px] font-mono font-medium"
+                  style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'#94a3b8' }}>
+                  {l}
+                </span>
               ))}
             </motion.div>
           </motion.div>
 
-          {/* Code preview */}
+          {/* ── Terminal preview ── */}
           <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.8, ease: [0.22,1,0.36,1] }}
-            className="mt-20 mx-auto max-w-2xl"
+            initial={{ opacity: 0, y: 80, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0,  scale: 1 }}
+            transition={{ delay: 0.6, duration: 0.9, ease: [0.16,1,0.3,1] }}
+            className="mt-20 max-w-2xl mx-auto"
           >
-            <div className="rounded-2xl overflow-hidden border border-[#1a1a2e] shadow-2xl"
-              style={{ boxShadow: '0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(124,58,237,0.1), 0 0 60px rgba(124,58,237,0.05)' }}>
-              {/* Window bar */}
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-[#1a1a2e]" style={{ background: '#0a0a14' }}>
-                <div className="w-3 h-3 rounded-full bg-red-500/70" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-                <div className="w-3 h-3 rounded-full bg-emerald-500/70" />
-                <span className="ml-2 text-xs font-mono text-slate-500">solution.py</span>
-                <div className="ml-auto flex items-center gap-3">
-                  <span className="status-accepted px-2 py-0.5 rounded-full text-xs font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-1.5" />
-                    {lang === 'ru' ? 'Принято' : 'Accepted'}
+            <div className="rounded-2xl overflow-hidden"
+              style={{
+                background: 'rgba(8,8,26,0.9)',
+                border: '1px solid rgba(99,102,241,0.2)',
+                boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 50px 120px rgba(0,0,0,0.9), 0 0 80px rgba(99,102,241,0.08)',
+              }}>
+              {/* Window chrome */}
+              <div className="flex items-center gap-2 px-5 py-3.5 border-b"
+                style={{ background:'rgba(255,255,255,0.02)', borderColor:'rgba(255,255,255,0.06)' }}>
+                <div className="w-3 h-3 rounded-full bg-red-500/60" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
+                <div className="w-3 h-3 rounded-full bg-green-500/60" />
+                <span className="ml-3 text-[11px] font-mono text-slate-500 flex-1">solution.py</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="st-ac pill text-[10px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    {lang==='ru'?'Принято':'Accepted'}
                   </span>
-                  <span className="text-xs font-mono text-slate-500">42мс · 16МБ</span>
+                  <span className="text-[11px] font-mono text-slate-500">42мс</span>
                 </div>
               </div>
               {/* Code */}
-              <div className="p-6 font-mono text-sm" style={{ background: '#0d0d18' }}>
-                {CODE_LINES.map((line, i) => (
-                  <div key={i} className="leading-6">
-                    {line.tokens.length === 0
-                      ? <span>&nbsp;</span>
-                      : line.tokens.map((tok, j) => (
-                          <span key={j} className={tok.c}>{tok.t}</span>
-                        ))
-                    }
-                  </div>
-                ))}
+              <div className="p-6 font-mono text-[13px] leading-7">
+                <div className="text-slate-500"># O(n) hash table — two sum</div>
+                <div className="mt-1">
+                  <span className="text-violet-400">def </span>
+                  <span className="text-blue-300">two_sum</span>
+                  <span className="text-slate-300">(nums: list, target: int) → list:</span>
+                </div>
+                <div className="pl-6 text-slate-400">seen = {'{}'}</div>
+                <div className="pl-6">
+                  <span className="text-violet-400">for </span>
+                  <span className="text-blue-200">i, n </span>
+                  <span className="text-violet-400">in </span>
+                  <span className="text-blue-200">enumerate(nums):</span>
+                </div>
+                <div className="pl-12">
+                  <span className="text-violet-400">if </span>
+                  <span className="text-slate-300">target - n </span>
+                  <span className="text-violet-400">in </span>
+                  <span className="text-slate-300">seen:</span>
+                </div>
+                <div className="pl-20">
+                  <span className="text-violet-400">return </span>
+                  <span className="text-emerald-400">[seen[target - n], i]</span>
+                </div>
+                <div className="pl-12 text-slate-300">seen[n] = i</div>
+              </div>
+              {/* Status bar */}
+              <div className="px-5 py-2.5 flex items-center justify-between border-t"
+                style={{ background:'rgba(255,255,255,0.01)', borderColor:'rgba(255,255,255,0.04)' }}>
+                <span className="text-[11px] font-mono text-slate-500">3/3 тестов пройдено</span>
+                <div className="flex gap-1.5">
+                  {[1,2,3].map(i => (
+                    <motion.div key={i} className="w-5 h-5 rounded-md flex items-center justify-center text-emerald-400"
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.8 + i * 0.1 }}
+                      style={{ background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.2)' }}>
+                      <span className="text-[9px] font-bold">✓</span>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ── Stats ── */}
-      <section className="py-14 border-y" style={{ borderColor: '#1a1a2e', background: 'rgba(13,13,24,0.5)' }}>
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {STATS.map(({ value, label }, i) => (
-            <motion.div key={label}
-              initial={{ opacity: 0, y: 20 }}
+      {/* ══ STATS ════════════════════════════════════════════════ */}
+      <section className="py-16 relative" style={{ background:'rgba(8,8,26,0.5)', borderTop:'1px solid rgba(255,255,255,0.05)', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+        <div className="max-w-4xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          {STATS.map(({ v, s, l }, i) => (
+            <motion.div key={l}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
+              transition={{ delay: i * 0.08, duration: 0.5, ease: 'easeOut' }}
             >
-              <div className="text-4xl font-black gradient-text mb-1">{value}</div>
-              <div className="text-sm text-slate-400">{label}</div>
+              <div className="text-5xl font-black tracking-tight gradient-text-hero mb-1">
+                {typeof v === 'number' ? <Counter to={v} suffix={s} /> : `${v}${s}`}
+              </div>
+              <div className="text-sm text-slate-500 font-medium">{l}</div>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <section className="py-24">
+      {/* ══ FEATURES ═════════════════════════════════════════════ */}
+      <section className="py-28 relative overflow-hidden">
+        <div className="blob blob-indigo w-[600px] h-[600px] opacity-30" style={{ top:'10%', right:'-10%' }} />
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <h2 className="text-4xl md:text-5xl font-black mb-4 text-white">
-                {lang === 'ru' ? 'Всё что нужно для ' : 'Everything to '}
-                <span className="gradient-text">{lang === 'ru' ? 'победы' : 'Win'}</span>
-              </h2>
-              <p className="text-lg text-slate-400 max-w-xl mx-auto">
-                {lang === 'ru' ? 'Создано программистами для программистов' : 'Built by competitive programmers, for competitive programmers.'}
-              </p>
-            </motion.div>
-          </div>
+          <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} className="text-center mb-16">
+            <div className="text-xs font-bold tracking-[0.2em] text-indigo-400 uppercase mb-4">
+              {lang==='ru'?'Возможности':'Features'}
+            </div>
+            <h2 className="heading-xl text-white mb-4">
+              {lang==='ru'?'Всё для победы':'Everything to'}
+              <br />
+              <span className="gradient-text-hero">{lang==='ru'?'в одном месте':'Win, in one place'}</span>
+            </h2>
+            <p className="text-slate-400 text-lg max-w-xl mx-auto">
+              {lang==='ru'?'Создано программистами для программистов':'Built by competitive programmers, for you.'}
+            </p>
+          </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map(({ icon: Icon, gradient, title, desc }, i) => (
-              <motion.div
-                key={title}
-                initial={{ opacity: 0, y: 30 }}
+            {FEATURES.map(({ icon: Icon, g, title, desc }, i) => (
+              <motion.div key={title}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.07, duration: 0.5, ease: [0.22,1,0.36,1] }}
+                transition={{ delay: i * 0.06, duration: 0.55, ease: [0.16,1,0.3,1] }}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="group relative p-6 rounded-2xl border border-[#1a1a2e] overflow-hidden cursor-default"
-                style={{ background: '#0d0d18' }}
+                className="glass-card p-7 group cursor-default"
               >
-                {/* Hover glow */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{ background: 'radial-gradient(circle at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 70%)' }} />
-                {/* Top border glow on hover */}
-                <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.6), transparent)' }} />
-
-                <div className={`relative w-11 h-11 rounded-xl flex items-center justify-center mb-4 bg-gradient-to-br ${gradient} shadow-lg`}>
-                  <Icon size={20} className="text-white" />
+                {/* Icon */}
+                <div className={`inline-flex w-12 h-12 rounded-2xl items-center justify-center mb-5 bg-gradient-to-br ${g} shadow-xl`}>
+                  <Icon size={22} className="text-white" />
                 </div>
-                <h3 className="relative text-base font-semibold text-white mb-2">{title}</h3>
-                <p className="relative text-sm leading-relaxed text-slate-400">{desc}</p>
+                {/* Shine line */}
+                <div className="absolute top-0 left-0 right-0 h-px rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  style={{ background:'linear-gradient(90deg,transparent,rgba(129,140,248,0.6),transparent)' }} />
+                <h3 className="text-[15px] font-semibold text-white mb-2 tracking-[-0.01em]">{title}</h3>
+                <p className="text-[13px] text-slate-400 leading-relaxed">{desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Why better ── */}
-      <section className="py-20 border-t" style={{ borderColor: '#1a1a2e' }}>
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <h2 className="text-4xl font-black text-white mb-4">
-              {lang === 'ru' ? 'Почему ' : 'Why '}
-              <span className="gradient-text">Aetheris?</span>
+      {/* ══ COMPARISON ═══════════════════════════════════════════ */}
+      <section className="py-24 relative" style={{ background:'rgba(8,8,26,0.4)' }}>
+        <div className="max-w-3xl mx-auto px-6">
+          <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} className="text-center mb-12">
+            <h2 className="heading-xl text-white mb-3">
+              {lang==='ru'?'Почему ':'Why '}
+              <span className="gradient-text-hero">Aetheris?</span>
             </h2>
-            <p className="text-slate-400 mb-12">
-              {lang === 'ru' ? 'Честное сравнение с другими платформами' : 'An honest comparison with other platforms'}
-            </p>
+            <p className="text-slate-400">{lang==='ru'?'Честное сравнение':'An honest comparison'}</p>
           </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="rounded-2xl border border-[#1a1a2e] overflow-hidden"
-            style={{ background: '#0d0d18' }}
-          >
-            <div className="grid grid-cols-4 text-sm">
-              <div className="p-4 text-left text-slate-400 font-medium">
-                {lang === 'ru' ? 'Функция' : 'Feature'}
-              </div>
-              {['Aetheris', 'Codeforces', 'LeetCode'].map(p => (
-                <div key={p} className={`p-4 text-center font-semibold ${p === 'Aetheris' ? 'text-purple-400' : 'text-slate-500'}`}>{p}</div>
+          <motion.div initial={{ opacity:0, y:32 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+            transition={{ duration: 0.6, ease:[0.16,1,0.3,1] }}
+            className="rounded-2xl overflow-hidden"
+            style={{ background:'rgba(8,8,26,0.8)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 40px 80px rgba(0,0,0,0.5)' }}>
+            <div className="grid grid-cols-4 border-b" style={{ borderColor:'rgba(255,255,255,0.06)' }}>
+              <div className="px-5 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">{lang==='ru'?'Функция':'Feature'}</div>
+              {['Aetheris','Codeforces','LeetCode'].map(p => (
+                <div key={p} className={`px-5 py-4 text-center text-[13px] font-bold ${p==='Aetheris'?'text-indigo-400':'text-slate-500'}`}>{p}</div>
               ))}
             </div>
-            {[
-              [lang === 'ru' ? 'AI наставник' : 'AI Mentor',       true,  false, false],
-              [lang === 'ru' ? 'Дуэли 1v1'   : '1v1 Duels',        true,  false, false],
-              [lang === 'ru' ? 'Командные'    : 'Team Contests',    true,  true,  false],
-              [lang === 'ru' ? 'Тёмный UI'    : 'Dark-first UI',    true,  false, true ],
-              [lang === 'ru' ? 'Open-source'  : 'Open-source',      true,  false, false],
-            ].map(([feature, ...vals], i) => (
-              <div key={i} className="grid grid-cols-4 border-t text-sm" style={{ borderColor: '#1a1a2e' }}>
-                <div className="p-4 text-left text-slate-300">{feature as string}</div>
+            {CMP.map(([feat,...vals], i) => (
+              <motion.div key={i} initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }} transition={{ delay: i*0.05 }}
+                className="grid grid-cols-4 border-b hover:bg-white/[0.02] transition-colors" style={{ borderColor:'rgba(255,255,255,0.04)' }}>
+                <div className="px-5 py-3.5 text-[13px] text-slate-300">{feat as string}</div>
                 {(vals as boolean[]).map((v, j) => (
-                  <div key={j} className="p-4 flex justify-center">
-                    {v
-                      ? <CheckCircle2 size={16} className="text-emerald-400" />
-                      : <span className="w-4 h-px bg-slate-700 mt-2 block" />}
+                  <div key={j} className="px-5 py-3.5 flex justify-center">
+                    {v ? <CheckCircle2 size={15} className="text-emerald-400" />
+                       : <div className="w-4 h-px bg-slate-700 mt-2" />}
                   </div>
                 ))}
-              </div>
+              </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section className="py-20" style={{ background: 'rgba(13,13,24,0.4)' }}>
+      {/* ══ TESTIMONIALS ═════════════════════════════════════════ */}
+      <section className="py-24">
         <div className="max-w-5xl mx-auto px-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-            <h2 className="text-3xl font-black text-white">
-              {lang === 'ru' ? 'Что говорят ' : 'What '}
-              <span className="gradient-text">{lang === 'ru' ? 'участники' : 'Coders Say'}</span>
+          <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} className="text-center mb-12">
+            <h2 className="heading-xl text-white">
+              {lang==='ru'?'Что говорят ':'What '}
+              <span className="gradient-text-hero">{lang==='ru'?'участники':'coders say'}</span>
             </h2>
           </motion.div>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { user: 'algo_master', text: lang === 'ru' ? 'Aetheris лучше Codeforces. AI подсказки — просто огонь для обучения.' : 'Aetheris feels better than Codeforces. The AI hints are a game changer.' },
-              { user: 'cp_grinder',  text: lang === 'ru' ? 'Система дуэлей затягивает. За месяц вырос на 400 рейтинга.'          : 'The duel system is addictive. I improved by 400 rating in a month.'    },
-              { user: 'team_coder',  text: lang === 'ru' ? 'Наконец платформа, которая серьёзно относится к командным контестам.' : 'Finally a platform that takes team contests seriously.'                  },
-            ].map(({ user, text }, i) => (
-              <motion.div key={user}
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                className="p-6 rounded-2xl border border-[#1a1a2e] relative"
-                style={{ background: '#0d0d18' }}
+              { u:'algo_master', t: lang==='ru'?'Aetheris лучше Codeforces. AI объясняет ошибки как репетитор — понятно и без спойлеров.':'Better than Codeforces. AI explains mistakes like a tutor — clear and without spoilers.' },
+              { u:'cp_grinder',  t: lang==='ru'?'Система дуэлей затягивает. За месяц вырос на 400 рейтинга — реально работает.':'The duel system is addictive. I grew 400 rating in a month — it genuinely works.' },
+              { u:'team_coder',  t: lang==='ru'?'Наконец платформа, которая серьёзно относится к командным контестам. Real-time чат — огонь.':'Finally a platform that takes team contests seriously. Real-time chat is 🔥' },
+            ].map(({ u, t: txt }, i) => (
+              <motion.div key={u}
+                initial={{ opacity:0, y:28 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+                transition={{ delay:i*0.1, duration:0.5, ease:[0.16,1,0.3,1] }}
+                whileHover={{ y:-3, transition:{duration:0.2} }}
+                className="glass-card p-6 cursor-default"
               >
-                <div className="flex gap-0.5 mb-3">
-                  {[1,2,3,4,5].map(n => <Star key={n} size={12} className="text-yellow-400 fill-yellow-400" />)}
+                <div className="flex gap-0.5 mb-4">
+                  {[1,2,3,4,5].map(n => <Star key={n} size={12} className="text-amber-400 fill-amber-400" />)}
                 </div>
-                <p className="text-slate-300 text-sm leading-relaxed mb-4">"{text}"</p>
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-violet-700 flex items-center justify-center text-xs font-bold text-white">
-                    {user[0].toUpperCase()}
+                <p className="text-[13px] text-slate-300 leading-relaxed mb-5">"{txt}"</p>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                    style={{ background:'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                    {u[0].toUpperCase()}
                   </div>
-                  <span className="text-sm font-medium text-slate-400">@{user}</span>
+                  <span className="text-[13px] font-medium text-slate-400">@{u}</span>
                 </div>
               </motion.div>
             ))}
@@ -345,39 +397,44 @@ export function Landing() {
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
-      <section className="py-28 relative overflow-hidden">
-        <div className="absolute inset-0 hero-mesh opacity-60" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl opacity-10"
-          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)' }} />
+      {/* ══ CTA ══════════════════════════════════════════════════ */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="absolute inset-0 grid-bg" />
+        <div className="blob blob-indigo w-[800px] h-[800px] opacity-20" style={{ top:'50%', left:'50%', transform:'translate(-50%,-50%)' }} />
+        <div className="absolute inset-0 hero-bg" />
         <div className="relative max-w-3xl mx-auto px-6 text-center">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <h2 className="text-5xl font-black text-white mb-6">
-              {lang === 'ru' ? 'Готов к ' : 'Ready to '}
-              <span className="gradient-text">{lang === 'ru' ? 'победе?' : 'Win?'}</span>
+          <motion.div initial={{ opacity:0, y:32 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+            transition={{ duration:0.7, ease:[0.16,1,0.3,1] }}>
+            <h2 className="display text-white mb-6">
+              {lang==='ru'?'Готов к ':'Ready to'}
+              <br />
+              <span className="gradient-text-hero">{lang==='ru'?'победе?':'Win?'}</span>
             </h2>
-            <p className="text-slate-400 text-lg mb-8">
-              {lang === 'ru' ? 'Присоединяйся бесплатно и начни решать задачи прямо сейчас.' : 'Join for free and start solving problems right now.'}
+            <p className="text-slate-400 text-lg mb-10 max-w-md mx-auto">
+              {lang==='ru'?'Присоединяйся бесплатно и начни решать задачи прямо сейчас.':'Join free and start solving problems right now.'}
             </p>
             <Link to="/register">
-              <button className="inline-flex items-center gap-2 px-10 py-4 rounded-xl text-lg font-bold text-white btn-primary-glow cursor-pointer">
-                {lang === 'ru' ? 'Начать бесплатно' : 'Get Started Free'}
-                <ArrowRight size={20} />
-              </button>
+              <motion.button
+                whileHover={{ scale: 1.03, y: -3 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center gap-3 px-10 py-4 rounded-2xl text-base font-bold text-white btn-glow cursor-pointer"
+              >
+                {lang==='ru'?'Начать бесплатно':'Get Started Free'}
+                <ArrowRight size={19} />
+              </motion.button>
             </Link>
           </motion.div>
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="border-t py-8" style={{ borderColor: '#1a1a2e' }}>
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500 text-sm">
+      {/* ══ FOOTER ═══════════════════════════════════════════════ */}
+      <footer className="border-t py-8" style={{ borderColor:'rgba(255,255,255,0.06)' }}>
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between gap-4 text-slate-500 text-[12px]">
           <div className="flex items-center gap-2">
-            <Zap size={13} className="text-purple-500" />
+            <Zap size={12} className="text-indigo-400" />
             <span className="font-bold text-slate-400">Aetheris</span>
-            <span>— {lang === 'ru' ? 'олимпиадная платформа' : 'competitive programming platform'}</span>
           </div>
-          <span>© 2025 Aetheris. {lang === 'ru' ? 'Все права защищены.' : 'All rights reserved.'}</span>
+          <span>© 2025 Aetheris</span>
         </div>
       </footer>
     </div>
