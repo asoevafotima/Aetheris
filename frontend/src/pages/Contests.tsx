@@ -138,13 +138,20 @@ interface NewProblemForm {
   title: string; description: string; input_format: string;
   output_format: string; constraints: string;
   difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+  topic: string;
   tests: { input: string; output: string }[];
   [key: string]: string | { input: string; output: string }[];
 }
 
+const PROBLEM_TOPICS = [
+  'Массивы', 'Строки', 'Математика', 'Ввод/вывод', 'Сортировка',
+  'Поиск', 'Динамическое программирование', 'Жадные алгоритмы',
+  'Рекурсия', 'Графы', 'Деревья', 'Брутфорс',
+];
+
 const EMPTY_PROBLEM: NewProblemForm = {
   title: '', description: '', input_format: '', output_format: '',
-  constraints: '', difficulty: 'easy',
+  constraints: '', difficulty: 'easy', topic: '',
   tests: [{ input: '', output: '' }],
 };
 
@@ -187,6 +194,7 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
         output_format: newProblem.output_format.trim(),
         constraints: newProblem.constraints.trim(),
         difficulty: newProblem.difficulty,
+        topic: newProblem.topic || undefined,
         is_public: false, // скрыта пока контест не завершён
       });
       for (let i = 0; i < validTests.length; i++) {
@@ -435,18 +443,33 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
                     )}
                   </div>
                 ))}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-[var(--text-2)] font-medium">Сложность</label>
-                  <select
-                    className="input-theme w-full rounded-lg px-3 py-2 text-sm"
-                    value={newProblem.difficulty}
-                    onChange={e => setNewProblem(p => ({ ...p, difficulty: e.target.value as 'easy' | 'medium' | 'hard' | 'expert' }))}
-                  >
-                    <option value="easy">Лёгкая</option>
-                    <option value="medium">Средняя</option>
-                    <option value="hard">Сложная</option>
-                    <option value="expert">Эксперт</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-[var(--text-2)] font-medium">Сложность</label>
+                    <select
+                      className="input-theme w-full rounded-lg px-3 py-2 text-sm"
+                      value={newProblem.difficulty}
+                      onChange={e => setNewProblem(p => ({ ...p, difficulty: e.target.value as 'easy' | 'medium' | 'hard' | 'expert' }))}
+                    >
+                      <option value="easy">Лёгкая</option>
+                      <option value="medium">Средняя</option>
+                      <option value="hard">Сложная</option>
+                      <option value="expert">Эксперт</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-[var(--text-2)] font-medium">Тема</label>
+                    <select
+                      className="input-theme w-full rounded-lg px-3 py-2 text-sm"
+                      value={newProblem.topic}
+                      onChange={e => setNewProblem(p => ({ ...p, topic: e.target.value }))}
+                    >
+                      <option value="">— Без темы —</option>
+                      {PROBLEM_TOPICS.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 {/* Тесты */}
                 <div className="flex flex-col gap-2">

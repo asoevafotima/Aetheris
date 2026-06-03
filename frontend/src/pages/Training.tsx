@@ -207,6 +207,7 @@ function SetupScreen({ onStart, onBack }: {
       >
         Создать модуль ({MODULE_SIZE} задач)
       </Button>
+      {/* Ошибка «нет задач по теме» передаётся снаружи через onStart */}
     </motion.div>
   );
 }
@@ -461,6 +462,7 @@ export function Training() {
   const [mode, setMode] = useState<'home' | 'setup' | 'practice' | 'complete'>('home');
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [noProblemsError, setNoProblemsError] = useState<string | null>(null);
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['training-plans'],
@@ -473,7 +475,21 @@ export function Training() {
 
   const handleStart = async (topic: string, difficulty: string, concern: string) => {
     setCreating(true);
+    setNoProblemsError(null);
     try {
+      // Сначала проверяем — есть ли задачи по этой теме
+      const params: Record<string, string | number> = { limit: MODULE_SIZE * 3, topic };
+      if (difficulty) params.difficulty = difficulty;
+
+      const allProblems = await problemsApi.list(params as Parameters<typeof problemsApi.list>[0]);
+      const problems = allProblems as ProblemShort[];
+
+      if (problems.length === 0) {
+        const diffLabel = difficulty ? ` (сложность: ${difficulty})` : '';
+        setNoProblemsError(`По теме "${topic}"${diffLabel} задач не найдено. Попробуй другую тему или сложность.`);
+        return;
+      }
+
       // Создаём план
       const desc = concern.trim()
         ? `${topic} · ${concern.trim().slice(0, 100)}`
@@ -484,27 +500,10 @@ export function Training() {
         description: desc,
       });
 
-      // Получаем задачи по теме
-      const params: Record<string, string | number> = { limit: MODULE_SIZE * 2, topic };
-      if (difficulty) params.difficulty = difficulty;
-
-      const allProblems = await problemsApi.list(params as Parameters<typeof problemsApi.list>[0]);
-      const problems = allProblems as ProblemShort[];
-
-      // Перемешиваем и берём MODULE_SIZE
+      // Перемешиваем и берём MODULE_SIZE задач
       const shuffled = [...problems].sort(() => Math.random() - 0.5).slice(0, MODULE_SIZE);
-
-      if (shuffled.length === 0) {
-        // Нет задач по теме — берём любые
-        const anyProblems = await problemsApi.list({ limit: MODULE_SIZE });
-        const any = anyProblems as ProblemShort[];
-        for (let i = 0; i < Math.min(MODULE_SIZE, any.length); i++) {
-          await trainingApi.addItem({ plan_id: plan.id, problem_id: any[i].id, order_num: i });
-        }
-      } else {
-        for (let i = 0; i < shuffled.length; i++) {
-          await trainingApi.addItem({ plan_id: plan.id, problem_id: shuffled[i].id, order_num: i });
-        }
+      for (let i = 0; i < shuffled.length; i++) {
+        await trainingApi.addItem({ plan_id: plan.id, problem_id: shuffled[i].id, order_num: i });
       }
 
       await qc.invalidateQueries({ queryKey: ['training-plans'] });
@@ -589,6 +588,11 @@ export function Training() {
               )}
             </div>
 
+            {noProblemsError && (
+              <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+                {noProblemsError}
+              </div>
+            )}
             {creating && (
               <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 flex flex-col items-center gap-4">
@@ -605,8 +609,13 @@ export function Training() {
           <motion.div key="setup">
             <SetupScreen
               onStart={(topic, diff, concern) => handleStart(topic, diff, concern)}
-              onBack={() => setMode('home')}
+              onBack={() => { setMode('home'); setNoProblemsError(null); }}
             />
+            {noProblemsError && (
+              <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+                {noProblemsError}
+              </div>
+            )}
             {creating && (
               <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 flex flex-col items-center gap-4">
