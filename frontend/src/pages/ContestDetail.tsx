@@ -417,7 +417,7 @@ export function ContestDetail() {
 
   // Merge API standings into local state
   useEffect(() => {
-    if (apiStandings?.length) {
+    if (apiStandings !== undefined) {
       setLiveStandings(apiStandings as StandingRow[]);
     }
   }, [apiStandings]);

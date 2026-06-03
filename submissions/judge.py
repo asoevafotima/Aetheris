@@ -5,6 +5,7 @@ import tempfile
 import time
 import uuid
 import shutil
+from datetime import datetime
 
 
 def _normalize(s: str) -> str:
@@ -270,8 +271,6 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
 
 def _update_duel(db, sub, final_status, score_pct: float):
     """Update duel state after a submission is judged."""
-    if not sub.contest_id:
-        return
     try:
         from duels.models import Duel, DuelStatus
         from submissions.models import SubmissionStatus
@@ -329,13 +328,17 @@ def _update_contest_standings(db, sub):
         score = len(solved)
         penalty = 0
         for pid, acc_sub in solved.items():
-            delta_min = int((acc_sub.created_at - contest.starts_at).total_seconds() / 60)
+            # Strip timezone info to avoid naive/aware subtraction errors
+            sub_time = acc_sub.created_at.replace(tzinfo=None) if acc_sub.created_at else datetime.utcnow()
+            start_time = contest.starts_at.replace(tzinfo=None) if contest.starts_at else sub_time
+            delta_min = int((sub_time - start_time).total_seconds() / 60)
             penalty += max(0, delta_min) + 20 * wrong_count.get(pid, 0)
 
         upsert_standing(db, sub.contest_id, sub.user_id, score, penalty)
         update_ranks(db, sub.contest_id)
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"standings update failed: {e}")
 
 
 def _save_ai_hint(db, sub, status: str, error_message: str, problem, passed_count: int, total_count: int):

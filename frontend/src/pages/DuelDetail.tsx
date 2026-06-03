@@ -191,7 +191,9 @@ export function DuelDetail() {
       const d = q.state.data;
       if (!d || d.status === 'pending' || d.status === 'running') return 1000;
       setPolling(false);
+      // Refresh duel to update scores
       qc.invalidateQueries({ queryKey: ['duel', id] });
+      qc.invalidateQueries({ queryKey: ['duels', 'mine'] });
       return false;
     },
   });
