@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, User, Zap } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { authApi } from '../api/endpoints';
 import { useAuthStore } from '../store/authStore';
 
@@ -16,74 +17,75 @@ export function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.password !== form.confirm) { setError('Пароли не совпадают'); return; }
-    if (form.password.length < 6) { setError('Пароль минимум 6 символов'); return; }
-    setError(''); setLoading(true);
+    if (form.password.length < 6) { setError('Пароль должен быть минимум 6 символов'); return; }
+    setError('');
+    setLoading(true);
     try {
       await authApi.register({ username: form.username, email: form.email, password: form.password });
       await login(form.email, form.password);
       navigate('/dashboard');
     } catch (err: unknown) {
-      setError((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Ошибка регистрации');
-    } finally { setLoading(false); }
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(msg ?? 'Ошибка регистрации');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const iStyle: React.CSSProperties = {
-    width:'100%', background:'var(--bg-2,#08080f)', border:'1px solid var(--border)',
-    borderRadius:10, padding:'11px 12px 11px 38px', color:'var(--text-1)', fontSize:14,
-    outline:'none', transition:'border-color 0.15s, box-shadow 0.15s', fontFamily:'Inter,sans-serif',
-  };
-  const fo = (e: React.FocusEvent<HTMLInputElement>) => { e.target.style.borderColor='var(--accent)'; e.target.style.boxShadow='0 0 0 3px var(--glow)'; };
-  const bl = (e: React.FocusEvent<HTMLInputElement>) => { e.target.style.borderColor='var(--border)'; e.target.style.boxShadow='none'; };
 
   return (
-    <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center', padding:16, position:'relative', overflow:'hidden' }}>
-      <div className="hero-glow-left" />
-      <div className="hero-glow-right" />
+    <div className="min-h-screen bg-app flex items-center justify-center p-4">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl" />
+      </div>
 
-      <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:0.45,ease:'easeOut'}}
-        style={{width:'100%',maxWidth:420,position:'relative',zIndex:1}}>
-
-        <div style={{textAlign:'center',marginBottom:32}}>
-          <Link to="/" style={{display:'inline-flex',alignItems:'center',gap:10,textDecoration:'none',marginBottom:24}}>
-            <div style={{width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center'}} className="glow-pulse">
-              <Zap size={20} color="#fff"/>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md relative">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2 mb-6">
+            <div className="w-11 h-11 rounded-xl bg-purple-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
+              <Zap size={22} className="text-white" />
             </div>
-            <span style={{fontSize:24,fontWeight:900,letterSpacing:'-0.03em'}} className="gradient-text">Aetheris</span>
+            <span className="text-2xl font-black gradient-text">Aetheris</span>
           </Link>
-          <h1 style={{fontSize:22,fontWeight:700,color:'var(--text-1)',letterSpacing:'-0.02em',marginBottom:6}}>Создать аккаунт</h1>
-          <p style={{fontSize:14,color:'var(--text-3)'}}>Присоединяйся к тысячам программистов</p>
+          <h1 className="text-2xl font-bold text-[var(--text-1)] mb-1">Создать аккаунт</h1>
+          <p className="text-[var(--text-3)] text-sm">Присоединяйся к тысячам программистов</p>
         </div>
 
-        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:20,padding:32,backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)'}}>
+        <div className="card-theme rounded-2xl p-8">
           {error && (
-            <motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}}
-              style={{marginBottom:16,padding:'10px 14px',borderRadius:10,background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)',color:'#f87171',fontSize:13}}>
-              ⚠ {error}
-            </motion.div>
+            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">⚠ {error}</div>
           )}
-          <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:14}}>
-            {[
-              {label:'Логин',      type:'text',     ph:'your_handle',          val:form.username, Icon:User, key:'username'},
-              {label:'Email',      type:'email',    ph:'you@example.com',      val:form.email,    Icon:Mail, key:'email'},
-              {label:'Пароль',     type:'password', ph:'Минимум 6 символов',   val:form.password, Icon:Lock, key:'password'},
-              {label:'Повторите',  type:'password', ph:'Повторите пароль',     val:form.confirm,  Icon:Lock, key:'confirm'},
-            ].map(({label,type,ph,val,Icon,key})=>(
-              <div key={key} style={{display:'flex',flexDirection:'column',gap:6}}>
-                <label style={{fontSize:12,fontWeight:500,color:'var(--text-2)'}}>{label}</label>
-                <div style={{position:'relative'}}>
-                  <Icon size={15} color="var(--text-3)" style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}/>
-                  <input type={type} placeholder={ph} required value={val}
-                    onChange={e=>setForm({...form,[key]:e.target.value})}
-                    style={iStyle} onFocus={fo} onBlur={bl}/>
-                </div>
-              </div>
-            ))}
-            <Button type="submit" loading={loading} size="lg" className="w-full mt-2">Зарегистрироваться</Button>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Input
+              label="Логин (username)" placeholder="your_handle" icon={<User size={16} />}
+              value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} required
+            />
+            <Input
+              label="Email" type="email" placeholder="you@example.com" icon={<Mail size={16} />}
+              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required
+            />
+            <Input
+              label="Пароль" type="password" placeholder="Минимум 6 символов" icon={<Lock size={16} />}
+              value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required
+            />
+            <Input
+              label="Повторите пароль" type="password" placeholder="Повторите пароль" icon={<Lock size={16} />}
+              value={form.confirm} onChange={e => setForm({ ...form, confirm: e.target.value })} required
+            />
+            <Button type="submit" loading={loading} className="w-full mt-2" size="lg">
+              Зарегистрироваться
+            </Button>
           </form>
-          <p style={{textAlign:'center',marginTop:20,fontSize:13,color:'var(--text-3)'}}>
-            Уже есть аккаунт?{' '}
-            <Link to="/login" style={{color:'var(--accent-text,#a78bfa)',fontWeight:600,textDecoration:'none'}}>Войти</Link>
-          </p>
+
+          <div className="mt-6 text-center">
+            <p className="text-[var(--text-3)] text-sm">
+              Уже есть аккаунт?{' '}
+              <Link to="/login" className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
+                Войти
+              </Link>
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

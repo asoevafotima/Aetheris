@@ -23,7 +23,6 @@ class ContestCreate(BaseModel):
     starts_at: datetime
     ends_at: datetime
     is_public: bool = True
-    is_team_contest: bool = False
     max_participants: Optional[int] = None
 
     @model_validator(mode='after')
@@ -55,7 +54,6 @@ class ContestResponse(BaseModel):
     ends_at: datetime
     author_id: UUID
     is_public: bool
-    is_team_contest: bool = False
     max_participants: Optional[int]
     created_at: datetime
 

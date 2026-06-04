@@ -169,7 +169,6 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
     description: '',
     ...defaultDates(),
     is_public: true,
-    is_team_contest: false,
     max_participants: '',
   });
 
@@ -246,12 +245,12 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
       const contest = await contestsApi.create({
         title: form.title.trim(),
         description: form.description.trim() || undefined,
+        // Send as local ISO string without timezone — backend stores as-is
         starts_at: form.starts_at + ':00',
         ends_at:   form.ends_at   + ':00',
         is_public: form.is_public,
-        is_team_contest: form.is_team_contest,
         max_participants: form.max_participants ? parseInt(form.max_participants) : undefined,
-      } as Parameters<typeof contestsApi.create>[0]);
+      });
 
       // Добавляем задачи к контесту
       for (let i = 0; i < selectedProblems.length; i++) {
@@ -385,27 +384,6 @@ function CreateContestModal({ onClose }: { onClose: () => void }) {
               onChange={e => f('max_participants', e.target.value)}
             />
           </div>
-
-          {/* Team contest toggle */}
-          <button
-            type="button"
-            onClick={() => f('is_team_contest', !form.is_team_contest)}
-            className={`flex items-center gap-3 p-3 rounded-xl border text-sm font-medium transition-all cursor-pointer text-left ${
-              form.is_team_contest
-                ? 'border-violet-500/60 bg-violet-500/10 text-violet-300'
-                : 'border-[var(--border)] hover:border-[var(--border-hover)] text-[var(--text-2)]'
-            }`}
-          >
-            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-              form.is_team_contest ? 'border-violet-400 bg-violet-500' : 'border-[var(--border)]'
-            }`}>
-              {form.is_team_contest && <span className="text-white text-xs font-bold">✓</span>}
-            </div>
-            <div>
-              <p>Командный контест</p>
-              <p className="text-xs text-[var(--text-3)] font-normal mt-0.5">Команды регистрируются и участвуют вместе как одна единица</p>
-            </div>
-          </button>
 
           {/* Problems */}
           <div className="flex flex-col gap-2">
