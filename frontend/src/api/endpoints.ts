@@ -103,6 +103,11 @@ export const contestsApi = {
     api.get<ContestStanding[]>(`/contest-standings/${contestId}`).then(r => r.data),
   addProblem: (contestId: string, problemId: string, label?: string) =>
     api.post('/contest-problems/', { contest_id: contestId, problem_id: problemId, label }).then(r => r.data),
+  registerTeam: (contestId: string, teamId: string) =>
+    api.post(`/team-contests/`, { contest_id: contestId, team_id: teamId }).then(r => r.data).catch(() =>
+      api.post(`/contest-participants/register/${contestId}`, { team_id: teamId }).then(r => r.data)
+    ),
+  myTeams: () => api.get<import('../types').Team[]>('/teams/my').then(r => r.data).catch(() => api.get<import('../types').Team[]>('/teams/', { params: { my: true } }).then(r => r.data)),
 };
 
 // Duels
@@ -149,6 +154,15 @@ export const teamsApi = {
     api.post(`/team-members/${teamId}/add`, { user_id: userId }).then(r => r.data),
   removeMember: (teamId: string, userId: string) =>
     api.delete(`/team-members/${teamId}/remove/${userId}`),
+};
+
+// Team invitations
+export const teamInvitationsApi = {
+  send: (teamId: string, toUserId: string) =>
+    api.post('/team-invitations/', { team_id: teamId, to_user_id: toUserId }).then(r => r.data),
+  myIncoming: () => api.get('/team-invitations/me').then(r => r.data),
+  accept:  (id: string) => api.post(`/team-invitations/${id}/accept`).then(r => r.data),
+  decline: (id: string) => api.post(`/team-invitations/${id}/decline`).then(r => r.data),
 };
 
 // Chat

@@ -17,8 +17,8 @@ import { Duels }          from './pages/Duels';
 import { DuelDetail }     from './pages/DuelDetail';
 import { Friends }        from './pages/Friends';
 import { Teams }          from './pages/Teams';
+import { TeamDetail }     from './pages/TeamDetail';
 import { AIMentor }       from './pages/AIMentor';
-import { Visualizations } from './pages/Visualizations';
 import { Leaderboard }    from './pages/Leaderboard';
 import { Profile }        from './pages/Profile';
 import { Settings }       from './pages/Settings';
@@ -82,9 +82,8 @@ export default function App() {
               <Route path="/duels/:id"       element={<DuelDetail />} />
               <Route path="/friends"         element={<Friends />} />
               <Route path="/teams"           element={<Teams />} />
-              <Route path="/teams/:slug"     element={<Teams />} />
+              <Route path="/teams/:slug"     element={<TeamDetail />} />
               <Route path="/ai-mentor"       element={<AIMentor />} />
-              <Route path="/visualizations"  element={<Visualizations />} />
               <Route path="/leaderboard"     element={<Leaderboard />} />
               <Route path="/profile"         element={<Profile />} />
               <Route path="/profile/:userId" element={<Profile />} />

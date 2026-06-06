@@ -29,6 +29,7 @@ from ratings import models
 from submission_results import models
 from submissions import models
 from team_contests import models
+from team_invitations import models
 from team_members import models
 from teams import models
 from test_cases import models

@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aetheris — Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: #04080f; font-family: Inter, sans-serif; color: white; overflow-x: hidden; }
+
+/* ── NAVBAR ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 52px; height: 66px;
+  background: rgba(4,8,15,0.55);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.logo { display: flex; align-items: center; gap: 11px; }
+.logo-mark {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1 0%, #f59e0b 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 22px rgba(99,102,241,0.45), 0 0 44px rgba(245,158,11,0.15);
+  position: relative; overflow: hidden;
+}
+.logo-mark::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%);
+}
+.logo-name { font-weight: 800; font-size: 17px; letter-spacing: -0.03em; }
+.nav-center { display: flex; gap: 32px; }
+.nav-link {
+  color: rgba(255,255,255,0.38); font-size: 13.5px; font-weight: 500;
+  background: none; border: none; cursor: pointer; font-family: Inter,sans-serif;
+  transition: color 0.2s;
+}
+.nav-link:hover { color: rgba(255,255,255,0.85); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.btn-ghost {
+  color: rgba(255,255,255,0.42); font-size: 13.5px; font-weight: 500;
+  background: none; border: none; cursor: pointer; padding: 9px 16px;
+  font-family: Inter,sans-serif; transition: color 0.2s;
+}
+.btn-ghost:hover { color: white; }
+.btn-primary {
+  padding: 10px 22px; border-radius: 10px; font-size: 13.5px; font-weight: 700;
+  border: none; cursor: pointer; font-family: Inter,sans-serif;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.5), 0 4px 20px rgba(99,102,241,0.3);
+  transition: all 0.2s;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.7), 0 8px 28px rgba(99,102,241,0.45);
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative; height: 100vh; overflow: hidden;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+
+/* Sphere canvas — full background */
+#gc {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+}
+
+/* Overlay vignette so text stays readable */
+.hero-vignette {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 50%, rgba(4,8,15,0.18) 0%, transparent 80%),
+    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(4,8,15,0.9) 0%, transparent 100%),
+    radial-gradient(ellipse 100% 30% at 50% 0%, rgba(4,8,15,0.6) 0%, transparent 100%);
+}
+
+/* Gold shimmer line top */
+.hero-shimmer {
+  position: absolute; top: 66px; left: 0; right: 0; height: 1px; z-index: 2;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(245,158,11,0.0) 15%,
+    rgba(245,158,11,0.35) 40%,
+    rgba(99,102,241,0.4) 50%,
+    rgba(245,158,11,0.35) 60%,
+    rgba(245,158,11,0.0) 85%,
+    transparent 100%
+  );
+}
+
+.hero-content {
+  position: relative; z-index: 3;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding-top: 66px;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 18px; border-radius: 100px;
+  border: 1px solid rgba(245,158,11,0.3);
+  background: rgba(245,158,11,0.06);
+  backdrop-filter: blur(12px);
+  color: rgba(253,230,138,0.85); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.05em; margin-bottom: 28px;
+  animation: riseIn 0.8s 0.15s both;
+}
+.badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+  animation: pulse-gold 2.5s ease-in-out infinite;
+}
+@keyframes pulse-gold {
+  0%,100% { box-shadow: 0 0 4px #f59e0b; }
+  50% { box-shadow: 0 0 14px #f59e0b, 0 0 28px rgba(245,158,11,0.4); }
+}
+
+/* Eyebrow line */
+.eyebrow {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  animation: riseIn 0.8s 0.28s both;
+}
+.eyebrow-line {
+  width: 36px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.55));
+}
+.eyebrow-line.r {
+  background: linear-gradient(270deg, transparent, rgba(245,158,11,0.55));
+}
+.eyebrow-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(165,180,252,0.6);
+}
+
+/* H1 */
+h1 {
+  font-size: 96px; font-weight: 900; line-height: 0.95;
+  letter-spacing: -0.055em; margin-bottom: 22px;
+  animation: riseIn 0.9s 0.4s both;
+}
+.h1-main {
+  display: block;
+  background: linear-gradient(140deg, #ffffff 0%, #e0e7ff 35%, #a5b4fc 60%, #fde68a 85%, #f59e0b 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 60px rgba(99,102,241,0.3));
+}
+.h1-sub {
+  display: block; font-size: 0.38em; font-weight: 500;
+  letter-spacing: 0.02em; color: rgba(255,255,255,0.22); margin-top: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  -webkit-text-fill-color: rgba(255,255,255,0.22);
+}
+
+/* Sub */
+.hero-desc {
+  font-size: 16px; color: rgba(255,255,255,0.35); line-height: 1.7;
+  max-width: 460px; margin-bottom: 40px;
+  animation: riseIn 0.8s 0.55s both;
+}
+.hero-desc span { color: rgba(165,180,252,0.6); }
+
+/* CTAs */
+.ctas {
+  display: flex; gap: 12px;
+  animation: riseIn 0.8s 0.7s both;
+}
+.cta-main {
+  padding: 15px 34px; border-radius: 12px; font-size: 15px; font-weight: 800;
+  border: none; cursor: pointer; font-family: Inter,sans-serif;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
+  color: white;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.5), 0 8px 32px rgba(99,102,241,0.35), 0 0 60px rgba(99,102,241,0.15);
+  display: flex; align-items: center; gap: 9px;
+  transition: all 0.25s;
+}
+.cta-main:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.7), 0 16px 48px rgba(99,102,241,0.5), 0 0 80px rgba(99,102,241,0.2);
+}
+.cta-arrow {
+  width: 24px; height: 24px; border-radius: 7px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; transition: transform 0.2s;
+}
+.cta-main:hover .cta-arrow { transform: translateX(3px); }
+
+.cta-gold {
+  padding: 15px 34px; border-radius: 12px; font-size: 15px; font-weight: 700;
+  border: 1px solid rgba(245,158,11,0.3);
+  background: rgba(245,158,11,0.06);
+  backdrop-filter: blur(12px);
+  color: rgba(253,230,138,0.9); cursor: pointer; font-family: Inter,sans-serif;
+  transition: all 0.2s;
+}
+.cta-gold:hover {
+  background: rgba(245,158,11,0.12);
+  border-color: rgba(245,158,11,0.55);
+  color: #fde68a;
+  box-shadow: 0 0 30px rgba(245,158,11,0.15);
+}
+
+/* Stats strip */
+.stats-strip {
+  display: flex; align-items: center; gap: 0;
+  margin-top: 60px;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px; overflow: hidden;
+  background: rgba(4,8,15,0.5); backdrop-filter: blur(20px);
+  animation: riseIn 0.8s 0.9s both;
+}
+.stat-item {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 18px 36px; border-right: 1px solid rgba(255,255,255,0.06);
+  min-width: 130px;
+}
+.stat-item:last-child { border-right: none; }
+.stat-v {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 24px; font-weight: 700; letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #a5b4fc, #fde68a);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.stat-l {
+  font-size: 10px; color: rgba(255,255,255,0.22);
+  text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; font-weight: 600;
+}
+
+/* Scroll indicator */
+.scroll-hint {
+  position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+  z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  animation: riseIn 0.8s 1.3s both;
+}
+.scroll-mouse {
+  width: 22px; height: 34px; border-radius: 11px;
+  border: 1px solid rgba(255,255,255,0.15);
+  display: flex; justify-content: center; padding-top: 6px;
+}
+.scroll-wheel {
+  width: 3px; height: 7px; border-radius: 2px;
+  background: linear-gradient(180deg, #a5b4fc, #f59e0b);
+  animation: scroll-anim 2s ease-in-out infinite;
+}
+@keyframes scroll-anim {
+  0%,100% { transform: translateY(0); opacity:1; }
+  80% { transform: translateY(8px); opacity:0; }
+}
+.scroll-label {
+  font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.18); font-weight: 600;
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px; margin: 0 60px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(99,102,241,0.2) 25%,
+    rgba(245,158,11,0.2) 50%,
+    rgba(99,102,241,0.2) 75%,
+    transparent
+  );
+}
+
+/* ── FEATURES ── */
+.section { padding: 100px 56px; }
+.section-head { text-align: center; margin-bottom: 56px; }
+.section-tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 14px; border-radius: 100px;
+  border: 1px solid rgba(99,102,241,0.25);
+  background: rgba(99,102,241,0.06);
+  color: #a5b4fc; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  font-family: 'JetBrains Mono',monospace; margin-bottom: 20px;
+}
+.section-title {
+  font-size: 50px; font-weight: 900; letter-spacing: -0.04em; line-height: 1.05;
+}
+.section-title .gold {
+  background: linear-gradient(135deg, #fde68a, #f59e0b);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.section-title .indigo {
+  background: linear-gradient(135deg, #a5b4fc, #818cf8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.features-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
+  max-width: 1100px; margin: 0 auto;
+}
+.feat-card {
+  padding: 30px; border-radius: 22px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(20px);
+  position: relative; overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
+  cursor: default;
+}
+.feat-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.4), rgba(245,158,11,0.3), transparent);
+  opacity: 0; transition: opacity 0.35s;
+}
+.feat-card:hover {
+  background: rgba(99,102,241,0.05);
+  border-color: rgba(99,102,241,0.22);
+  transform: translateY(-5px);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(99,102,241,0.12);
+}
+.feat-card:hover::before { opacity: 1; }
+.feat-icon-wrap {
+  width: 50px; height: 50px; border-radius: 15px; margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: center; font-size: 23px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(245,158,11,0.08));
+  border: 1px solid rgba(99,102,241,0.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+}
+.feat-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.02em; }
+.feat-desc { font-size: 13.5px; color: rgba(255,255,255,0.35); line-height: 1.7; }
+
+/* ── CODE BLOCK ── */
+.code-section { padding: 0 56px 100px; }
+.code-wrap { max-width: 860px; margin: 0 auto; border-radius: 22px; overflow: hidden; border: 1px solid rgba(99,102,241,0.18); box-shadow: 0 0 80px rgba(99,102,241,0.08), 0 0 40px rgba(245,158,11,0.04); }
+.code-bar {
+  display: flex; align-items: center; gap: 8px; padding: 14px 22px;
+  background: rgba(255,255,255,0.025); border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.code-dot { width: 11px; height: 11px; border-radius: 50%; }
+.code-filename { margin-left: 10px; font-family: 'JetBrains Mono',monospace; font-size: 12px; color: rgba(255,255,255,0.25); }
+.code-verdict {
+  margin-left: auto; padding: 3px 12px; border-radius: 7px;
+  font-size: 11px; font-family: 'JetBrains Mono',monospace;
+  background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.22); color: #4ade80;
+}
+.code-time { font-size: 11px; color: rgba(255,255,255,0.18); font-family: 'JetBrains Mono',monospace; margin-left: 12px; }
+.code-body { padding: 28px 28px; font-family: 'JetBrains Mono',monospace; font-size: 13px; line-height: 1.85; background: rgba(4,8,15,0.7); }
+
+/* ── CTA SECTION ── */
+.cta-section { padding: 0 56px 100px; }
+.cta-card {
+  max-width: 820px; margin: 0 auto; border-radius: 28px;
+  padding: 72px 60px; text-align: center;
+  background: rgba(4,8,15,0.6); backdrop-filter: blur(30px);
+  border: 1px solid rgba(99,102,241,0.18);
+  position: relative; overflow: hidden;
+  box-shadow: 0 0 100px rgba(99,102,241,0.1), 0 0 60px rgba(245,158,11,0.04);
+}
+.cta-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.5), rgba(245,158,11,0.4), rgba(99,102,241,0.5), transparent);
+}
+.cta-orb {
+  position: absolute; width: 400px; height: 400px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%);
+  top: -100px; left: 50%; transform: translateX(-50%); pointer-events: none;
+}
+.cta-icon {
+  width: 62px; height: 62px; border-radius: 20px; margin: 0 auto 28px;
+  background: linear-gradient(135deg, #6366f1, #f59e0b);
+  display: flex; align-items: center; justify-content: center; font-size: 26px;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.4), 0 0 40px rgba(99,102,241,0.3), 0 0 80px rgba(245,158,11,0.1);
+  animation: cta-pulse 3s ease-in-out infinite;
+}
+@keyframes cta-pulse {
+  0%,100% { box-shadow: 0 0 0 1px rgba(99,102,241,0.4), 0 0 30px rgba(99,102,241,0.25), 0 0 60px rgba(245,158,11,0.08); }
+  50% { box-shadow: 0 0 0 1px rgba(245,158,11,0.4), 0 0 50px rgba(99,102,241,0.35), 0 0 100px rgba(245,158,11,0.15); }
+}
+.cta-title {
+  font-size: 46px; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 14px; line-height: 1.05;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 40%, #fde68a 80%, #f59e0b 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.cta-sub { font-size: 15px; color: rgba(255,255,255,0.3); margin-bottom: 40px; }
+.cta-btn {
+  padding: 16px 40px; border-radius: 13px; font-size: 16px; font-weight: 800;
+  border: none; cursor: pointer; font-family: Inter,sans-serif;
+  background: linear-gradient(135deg, #6366f1, #4f46e5, #7c3aed);
+  color: white; display: inline-flex; align-items: center; gap: 10px;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.5), 0 8px 40px rgba(99,102,241,0.4);
+  transition: all 0.25s;
+}
+.cta-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.7), 0 20px 60px rgba(99,102,241,0.5);
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding: 28px 56px; background: rgba(4,8,15,0.7);
+  backdrop-filter: blur(20px);
+}
+.footer-inner {
+  max-width: 1100px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.footer-logo { display: flex; align-items: center; gap: 8px; }
+.footer-logo-mark {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: linear-gradient(135deg, #6366f1, #f59e0b);
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.footer-name { font-weight: 800; font-size: 14px; letter-spacing: -0.02em; }
+.footer-copy { font-size: 12px; color: rgba(255,255,255,0.16); }
+.footer-link { font-size: 12px; color: rgba(255,255,255,0.2); text-decoration: none; transition: color 0.2s; }
+.footer-link:hover { color: rgba(255,255,255,0.6); }
+
+/* ── TESTIMONIALS ── */
+.testi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; max-width: 1100px; margin: 0 auto; }
+.testi-card {
+  padding: 28px; border-radius: 20px;
+  background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(16px); transition: all 0.3s;
+}
+.testi-card:hover { border-color: rgba(245,158,11,0.2); transform: translateY(-3px); }
+.stars { display: flex; gap: 3px; margin-bottom: 16px; }
+.star { color: #f59e0b; font-size: 13px; }
+.testi-text { font-size: 13.5px; color: rgba(255,255,255,0.48); line-height: 1.75; margin-bottom: 22px; font-style: italic; }
+.testi-user { display: flex; align-items: center; gap: 10px; }
+.testi-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #f59e0b);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  box-shadow: 0 0 12px rgba(99,102,241,0.3);
+}
+.testi-name { font-size: 12px; color: rgba(255,255,255,0.28); font-family: 'JetBrains Mono',monospace; }
+</style>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<nav>
+  <div class="logo">
+    <div class="logo-mark">⚡</div>
+    <span class="logo-name">Aetheris</span>
+  </div>
+  <div class="nav-center">
+    <button class="nav-link">Задачи</button>
+    <button class="nav-link">Контесты</button>
+    <button class="nav-link">Рейтинг</button>
+    <button class="nav-link">Команды</button>
+  </div>
+  <div class="nav-right">
+    <button class="btn-ghost">Войти</button>
+    <button class="btn-primary">Начать бесплатно</button>
+  </div>
+</nav>
+
+<!-- ── HERO (3D SPHERE BACKGROUND) ── -->
+<div class="hero">
+  <canvas id="gc"></canvas>
+  <div class="hero-vignette"></div>
+  <div class="hero-shimmer"></div>
+
+  <div class="hero-content">
+    <div class="badge">
+      <div class="badge-dot"></div>
+      Сезон 2026 · Олимпиадная платформа
+    </div>
+
+    <div class="eyebrow">
+      <div class="eyebrow-line"></div>
+      <span class="eyebrow-text">Competitive Programming · AI · Duels</span>
+      <div class="eyebrow-line r"></div>
+    </div>
+
+    <h1>
+      <span class="h1-main">Aetheris</span>
+      <span class="h1-sub">// Compete. Win. Repeat.</span>
+    </h1>
+
+    <p class="hero-desc">
+      Решай задачи, побеждай в контестах, сражайся в дуэлях.<br>
+      <span>AI-наставник на Groq</span> · Умный судья · Визуализации
+    </p>
+
+    <div class="ctas">
+      <button class="cta-main">
+        Начать бесплатно
+        <div class="cta-arrow">→</div>
+      </button>
+      <button class="cta-gold">Смотреть задачи</button>
+    </div>
+
+    <div class="stats-strip">
+      <div class="stat-item"><div class="stat-v">50K+</div><div class="stat-l">Участников</div></div>
+      <div class="stat-item"><div class="stat-v">10K+</div><div class="stat-l">Задач</div></div>
+      <div class="stat-item"><div class="stat-v">500+</div><div class="stat-l">Контестов</div></div>
+      <div class="stat-item"><div class="stat-v">AI</div><div class="stat-l">Наставник</div></div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+    <span class="scroll-label">Scroll</span>
+  </div>
+</div>
+
+<!-- ── DIVIDER ── -->
+<div class="divider"></div>
+
+<!-- ── FEATURES ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-tag">⚡ Возможности</div>
+    <h2 class="section-title">
+      Всё что нужно<br>для <span class="indigo">победы</span> и <span class="gold">роста</span>
+    </h2>
+  </div>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon-wrap">⚖️</div>
+      <div class="feat-title">Умный судья</div>
+      <div class="feat-desc">Python и C++, реальное выполнение, детальный разбор каждого теста.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon-wrap">🏆</div>
+      <div class="feat-title">Живые контесты</div>
+      <div class="feat-desc">Рейтинговые соревнования с таблицей в реальном времени.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon-wrap">⚔️</div>
+      <div class="feat-title">Дуэли 1 на 1</div>
+      <div class="feat-desc">Вызывай соперников на поединок — кто первый решит задачу.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon-wrap">🤖</div>
+      <div class="feat-title">AI Наставник</div>
+      <div class="feat-desc">Groq LLM на русском — подсказки, анализ кода, отладка мгновенно.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon-wrap">📊</div>
+      <div class="feat-title">Визуализации</div>
+      <div class="feat-desc">Пошаговые анимации алгоритмов — BFS, DFS, сортировки и другие.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon-wrap">👥</div>
+      <div class="feat-title">Командные олимпиады</div>
+      <div class="feat-desc">Создай команду, соревнуйся вместе и поднимайся в командном рейтинге.</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── CODE EXAMPLE ── -->
+<div class="code-section" style="padding-top:80px;">
+  <div style="text-align:center; margin-bottom:40px;">
+    <div class="section-tag">{'<>'} Пример решения</div>
+    <h2 class="section-title" style="font-size:38px;">Пишешь код — получаешь <span class="indigo">вердикт</span></h2>
+  </div>
+  <div class="code-wrap">
+    <div class="code-bar">
+      <div class="code-dot" style="background:rgba(239,68,68,0.65);"></div>
+      <div class="code-dot" style="background:rgba(234,179,8,0.65);"></div>
+      <div class="code-dot" style="background:rgba(34,197,94,0.65);"></div>
+      <span class="code-filename">solution.py · Сумма двух чисел</span>
+      <span class="code-verdict">✓ Принято</span>
+      <span class="code-time">42мс · 16МБ</span>
+    </div>
+    <div class="code-body">
+      <div style="color:rgba(255,255,255,0.2);"># O(n) — хэш-таблица</div>
+      <br>
+      <div><span style="color:#c084fc;">def </span><span style="color:#67e8f9;">two_sum</span><span style="color:rgba(255,255,255,0.75);">(nums, target):</span></div>
+      <div style="padding-left:24px;"><span style="color:rgba(255,255,255,0.75);">seen = </span><span style="color:#fde68a;">{}</span></div>
+      <div style="padding-left:24px;"><span style="color:#c084fc;">for </span><span style="color:rgba(255,255,255,0.75);">i, n </span><span style="color:#c084fc;">in </span><span style="color:rgba(255,255,255,0.75);">enumerate(nums):</span></div>
+      <div style="padding-left:48px;"><span style="color:#c084fc;">if </span><span style="color:rgba(255,255,255,0.75);">target - n </span><span style="color:#c084fc;">in </span><span style="color:rgba(255,255,255,0.75);">seen:</span></div>
+      <div style="padding-left:72px;"><span style="color:#c084fc;">return </span><span style="color:rgba(255,255,255,0.75);">[seen[target - n], i]</span></div>
+      <div style="padding-left:48px;"><span style="color:rgba(255,255,255,0.75);">seen[n] = i</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider" style="margin-top:80px;"></div>
+
+<!-- ── TESTIMONIALS ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-tag">★ Отзывы</div>
+    <h2 class="section-title">Нас <span class="gold">любят</span> участники</h2>
+  </div>
+  <div class="testi-grid">
+    <div class="testi-card">
+      <div class="stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+      <p class="testi-text">"Aetheris лучше Codeforces. AI подсказки — просто огонь для обучения."</p>
+      <div class="testi-user">
+        <div class="testi-avatar">A</div>
+        <span class="testi-name">@algo_master</span>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+      <p class="testi-text">"Система дуэлей затягивает. За месяц вырос на 400 рейтинга."</p>
+      <div class="testi-user">
+        <div class="testi-avatar">C</div>
+        <span class="testi-name">@cp_grinder</span>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+      <p class="testi-text">"Наконец платформа, которая серьёзно относится к командным контестам."</p>
+      <div class="testi-user">
+        <div class="testi-avatar">T</div>
+        <span class="testi-name">@team_coder</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── CTA ── -->
+<div class="cta-section" style="padding-top:80px;">
+  <div class="cta-card">
+    <div class="cta-orb"></div>
+    <div class="cta-icon">⚡</div>
+    <div class="cta-title">Готов соревноваться?</div>
+    <p class="cta-sub">Регистрация бесплатна. Навсегда. Присоединяйся к тысячам программистов.</p>
+    <button class="cta-btn">Создать аккаунт <span>→</span></button>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <div class="footer-logo-mark">⚡</div>
+      <span class="footer-name">Aetheris</span>
+    </div>
+    <span class="footer-copy">© 2026 Aetheris · Для нового поколения программистов.</span>
+    <a href="#" class="footer-link">GitHub ↗</a>
+  </div>
+</footer>
+
+
+<script>
+/* ══════════════════════════════════════════
+   3D SPHERE + GRAPH BACKGROUND
+   (из файла aetheris_3d_sphere_hero.html)
+══════════════════════════════════════════ */
+const cv = document.getElementById('gc');
+const ctx2 = cv.getContext('2d');
+
+function resize() {
+  cv.width  = cv.offsetWidth  * devicePixelRatio;
+  cv.height = cv.offsetHeight * devicePixelRatio;
+  ctx2.scale(devicePixelRatio, devicePixelRatio);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const W = () => cv.offsetWidth;
+const H = () => cv.offsetHeight;
+
+let mx = W() / 2, my = H() / 2;
+cv.addEventListener('mousemove', e => {
+  const r = cv.getBoundingClientRect();
+  mx = e.clientX - r.left;
+  my = e.clientY - r.top;
+});
+
+const LABELS = ['Graph','DP','Greedy','Math','Strings','Trees','BFS','DFS','Sort','Hash','Heap','Binary','Floyd','Dijkstra'];
+const bgNodes = Array.from({ length: 40 }, (_, i) => {
+  const a = (i / 40) * Math.PI * 2;
+  const r = 80 + Math.random() * 260;
+  return {
+    x: W() / 2 + Math.cos(a) * r,
+    y: H() / 2 + Math.sin(a) * r,
+    vx: (Math.random() - .5) * .22,
+    vy: (Math.random() - .5) * .22,
+    r: Math.random() * 2.2 + 0.8,
+    pulse: Math.random() * Math.PI * 2,
+    speed: Math.random() * .014 + .006,
+    label: Math.random() > .55 ? LABELS[Math.floor(Math.random() * LABELS.length)] : null,
+  };
+});
+const bgEdges = [];
+for (let i = 0; i < bgNodes.length; i++) {
+  const k = Math.floor(Math.random() * 3) + 1;
+  for (let j = 0; j < k; j++) bgEdges.push([i, Math.floor(Math.random() * bgNodes.length)]);
+}
+let bgPackets = [], lastPkt = 0;
+
+function rot3D(x, y, z, ax, ay) {
+  let nx = x * Math.cos(ay) - z * Math.sin(ay);
+  let nz = x * Math.sin(ay) + z * Math.cos(ay);
+  let ny = y * Math.cos(ax) - nz * Math.sin(ax);
+  nz = y * Math.sin(ax) + nz * Math.cos(ax);
+  return [nx, ny, nz];
+}
+function proj(x, y, z, cx, cy, fov) {
+  const s = fov / (fov + z + 300);
+  return { px: cx + x * s, py: cy + y * s, s };
+}
+
+let sAngle = 0;
+const SPHERE_R = 115;
+const sphPts = [];
+for (let i = 0; i < 180; i++) {
+  const phi   = Math.acos(1 - 2 * (i + .5) / 180);
+  const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+  sphPts.push([
+    SPHERE_R * Math.sin(phi) * Math.cos(theta),
+    SPHERE_R * Math.sin(phi) * Math.sin(theta),
+    SPHERE_R * Math.cos(phi),
+  ]);
+}
+const sphEdges = [];
+for (let i = 0; i < sphPts.length; i++) {
+  for (let j = i + 1; j < sphPts.length; j++) {
+    const dx = sphPts[i][0] - sphPts[j][0];
+    const dy = sphPts[i][1] - sphPts[j][1];
+    const dz = sphPts[i][2] - sphPts[j][2];
+    if (Math.sqrt(dx*dx + dy*dy + dz*dz) < 52) sphEdges.push([i, j]);
+  }
+}
+
+const ORBIT_LABELS = ['O(n²)', 'O(log n)', 'BFS', 'DP', 'Hash', 'Sort'];
+const orbitPts = ORBIT_LABELS.map((lbl, i) => ({
+  a: (i / ORBIT_LABELS.length) * Math.PI * 2,
+  speed: .007 + Math.random() * .004,
+  label: lbl,
+  r: SPHERE_R * 1.58,
+}));
+
+function draw(ts) {
+  const w = W(), h = H();
+  ctx2.clearRect(0, 0, w, h);
+
+  /* — Background glow blobs — indigo + gold mix — */
+  const g1 = ctx2.createRadialGradient(w * .28, h * .3, 0, w * .28, h * .3, w * .6);
+  g1.addColorStop(0, 'rgba(99,102,241,0.16)'); g1.addColorStop(1, 'rgba(4,8,15,0)');
+  ctx2.fillStyle = g1; ctx2.fillRect(0, 0, w, h);
+
+  const g2 = ctx2.createRadialGradient(w * .75, h * .7, 0, w * .75, h * .7, w * .45);
+  g2.addColorStop(0, 'rgba(245,158,11,0.09)'); g2.addColorStop(1, 'rgba(4,8,15,0)');
+  ctx2.fillStyle = g2; ctx2.fillRect(0, 0, w, h);
+
+  const g3 = ctx2.createRadialGradient(w * .85, h * .2, 0, w * .85, h * .2, w * .35);
+  g3.addColorStop(0, 'rgba(139,92,246,0.08)'); g3.addColorStop(1, 'rgba(4,8,15,0)');
+  ctx2.fillStyle = g3; ctx2.fillRect(0, 0, w, h);
+
+  /* — Parallax offset — */
+  const mdx = (mx - w / 2) * .016;
+  const mdy = (my - h / 2) * .016;
+
+  /* — Background graph nodes — */
+  bgNodes.forEach(n => {
+    n.x += n.vx; n.y += n.vy; n.pulse += n.speed;
+    if (n.x < 10 || n.x > w - 10) n.vx *= -1;
+    if (n.y < 10 || n.y > h - 10) n.vy *= -1;
+  });
+  bgEdges.forEach(([i, j]) => {
+    const a = bgNodes[i], b = bgNodes[j];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > 220) return;
+    const al = (1 - dist / 220) * .1;
+    ctx2.beginPath();
+    ctx2.moveTo(a.x + mdx, a.y + mdy);
+    ctx2.lineTo(b.x + mdx, b.y + mdy);
+    ctx2.strokeStyle = `rgba(99,102,241,${al})`;
+    ctx2.lineWidth = .7; ctx2.stroke();
+  });
+
+  /* — Packets — */
+  if (ts - lastPkt > 320) {
+    bgPackets.push({ e: bgEdges[Math.floor(Math.random() * bgEdges.length)], t: 0, sp: .007 + Math.random() * .006 });
+    lastPkt = ts;
+  }
+  bgPackets = bgPackets.filter(p => p.t <= 1);
+  bgPackets.forEach(p => {
+    p.t += p.sp;
+    const a = bgNodes[p.e[0]], b = bgNodes[p.e[1]];
+    const x = a.x + (b.x - a.x) * p.t + mdx;
+    const y = a.y + (b.y - a.y) * p.t + mdy;
+    ctx2.beginPath(); ctx2.arc(x, y, 2.2, 0, Math.PI * 2);
+    ctx2.fillStyle = 'rgba(165,180,252,0.85)'; ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(x, y, 6, 0, Math.PI * 2);
+    ctx2.fillStyle = 'rgba(99,102,241,0.12)'; ctx2.fill();
+  });
+
+  bgNodes.forEach(n => {
+    const px = n.x + mdx, py = n.y + mdy;
+    const pl = Math.sin(n.pulse) * .5 + .5;
+    ctx2.beginPath(); ctx2.arc(px, py, n.r + 3.5, 0, Math.PI * 2);
+    ctx2.fillStyle = `rgba(99,102,241,${.04 + pl * .05})`; ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(px, py, n.r, 0, Math.PI * 2);
+    ctx2.fillStyle = `rgba(165,180,252,${.45 + pl * .45})`; ctx2.fill();
+    if (n.label) {
+      ctx2.font = '10px Inter, sans-serif';
+      ctx2.fillStyle = `rgba(165,180,252,${.28 + pl * .22})`;
+      ctx2.textAlign = 'center';
+      ctx2.fillText(n.label, px, py - n.r - 5);
+    }
+  });
+
+  /* — 3D Sphere — */
+  sAngle += .0055;
+  const ax = sAngle * .38 + (my - h / 2) * .0028;
+  const ay = sAngle      + (mx - w / 2) * .0028;
+  const cx = w / 2, cy = h / 2 - 10, fov = 500;
+
+  /* Sphere glow — indigo core, gold halo */
+  const sg = ctx2.createRadialGradient(cx, cy, 0, cx, cy, SPHERE_R * 2.2);
+  sg.addColorStop(0,   'rgba(99,102,241,0.22)');
+  sg.addColorStop(.45, 'rgba(99,102,241,0.10)');
+  sg.addColorStop(.75, 'rgba(245,158,11,0.05)');
+  sg.addColorStop(1,   'rgba(4,8,15,0)');
+  ctx2.fillStyle = sg;
+  ctx2.beginPath(); ctx2.arc(cx, cy, SPHERE_R * 2.2, 0, Math.PI * 2); ctx2.fill();
+
+  const rotPts = sphPts.map(([x, y, z]) => rot3D(x, y, z, ax, ay));
+
+  sphEdges.forEach(([i, j]) => {
+    const a = rotPts[i], b = rotPts[j];
+    const pa = proj(a[0], a[1], a[2], cx, cy, fov);
+    const pb = proj(b[0], b[1], b[2], cx, cy, fov);
+    const depth = (a[2] + b[2]) / 2;
+    const al = Math.max(.04, Math.min(.55, .14 + (depth / SPHERE_R) * .28));
+    ctx2.beginPath(); ctx2.moveTo(pa.px, pa.py); ctx2.lineTo(pb.px, pb.py);
+    /* indigo-to-gold gradient on edges based on depth */
+    const t = Math.max(0, Math.min(1, .5 + depth / SPHERE_R));
+    const r = Math.round(99  + (245-99 ) * t);
+    const g = Math.round(102 + (158-102) * t);
+    const b2 = Math.round(241 + (11-241) * t);
+    ctx2.strokeStyle = `rgba(${r},${g},${b2},${al})`;
+    ctx2.lineWidth = .85; ctx2.stroke();
+  });
+
+  rotPts.forEach(p => {
+    const pr = proj(p[0], p[1], p[2], cx, cy, fov);
+    const depth = p[2] / SPHERE_R;
+    const al = Math.max(.18, Math.min(1, .48 + depth * .52));
+    const nr = Math.max(.7, 2 * pr.s);
+    /* front points gold, back points indigo */
+    const t = Math.max(0, Math.min(1, .5 + depth));
+    ctx2.beginPath(); ctx2.arc(pr.px, pr.py, nr, 0, Math.PI * 2);
+    ctx2.fillStyle = t > .5
+      ? `rgba(253,230,138,${al})`
+      : `rgba(165,180,252,${al})`;
+    ctx2.fill();
+  });
+
+  /* — Orbit labels — */
+  orbitPts.forEach(op => {
+    op.a += op.speed;
+    const ox = Math.cos(op.a) * op.r;
+    const oy = Math.sin(op.a) * op.r * .38;
+    const rp = rot3D(ox, oy, 0, ax * .28, 0);
+    const pr = proj(rp[0], rp[1], rp[2], cx, cy, fov);
+    const al = Math.max(.28, Math.min(.95, .5 + (rp[2] / op.r) * .4));
+    ctx2.beginPath(); ctx2.arc(pr.px, pr.py, 3.5, 0, Math.PI * 2);
+    ctx2.fillStyle = `rgba(245,158,11,${al})`; ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(pr.px, pr.py, 8, 0, Math.PI * 2);
+    ctx2.fillStyle = `rgba(245,158,11,${al * .15})`; ctx2.fill();
+    ctx2.font = '500 11px JetBrains Mono, monospace';
+    ctx2.fillStyle = `rgba(253,230,138,${al * .9})`;
+    ctx2.textAlign = 'center';
+    ctx2.fillText(op.label, pr.px, pr.py - 11);
+  });
+
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

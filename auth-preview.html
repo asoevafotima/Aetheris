@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aetheris — Auth Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #04080f; font-family: Inter, sans-serif; color: white; overflow-x: hidden; }
+
+/* ── Selector ── */
+.bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: rgba(4,8,15,0.95); backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 28px; display: flex; align-items: center; gap: 8px;
+}
+.bar-label { color: rgba(255,255,255,0.28); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-right: 6px; }
+.sel { padding: 6px 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 12px; font-family: Inter,sans-serif; font-weight: 600; transition: all 0.2s; }
+.sel:hover { border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.8); }
+.sel.active { background: white; color: #04080f; border-color: white; }
+.tab { padding: 6px 16px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: rgba(255,255,255,0.35); cursor: pointer; font-size: 11px; font-family: Inter,sans-serif; font-weight: 600; transition: all 0.2s; margin-left: 4px; }
+.tab:hover { color: rgba(255,255,255,0.7); }
+.tab.active { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); color: #a5b4fc; }
+
+.page { display: none; min-height: 100vh; padding-top: 50px; }
+.page.active { display: flex; }
+
+/* ── Canvas bg (shared) ── */
+canvas.bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+/* ════════════════════════════════
+   VARIANT 1 — CENTERED GLASS CARD
+════════════════════════════════ */
+#v1 { align-items: center; justify-content: center; position: relative; }
+#v1 .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(4,8,15,0.55) 0%, rgba(4,8,15,0.85) 100%); }
+
+#v1 .card {
+  position: relative; z-index: 2;
+  width: 420px; padding: 44px 40px;
+  background: rgba(6,10,24,0.75);
+  backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.08), 0 32px 80px rgba(0,0,0,0.5), 0 0 120px rgba(99,102,241,0.06);
+}
+#v1 .card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; border-radius: 24px 24px 0 0;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.5), rgba(245,158,11,0.35), transparent);
+}
+#v1 .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+#v1 .logo-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg,#6366f1,#f59e0b); display: flex; align-items: center; justify-content: center; font-size: 17px; box-shadow: 0 0 20px rgba(99,102,241,0.4); }
+#v1 .logo-name { font-weight: 800; font-size: 18px; letter-spacing: -0.03em; }
+#v1 h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px; }
+#v1 .sub { font-size: 13px; color: rgba(255,255,255,0.32); margin-bottom: 28px; }
+
+.input-group { margin-bottom: 16px; }
+.input-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45); margin-bottom: 7px; display: block; letter-spacing: 0.04em; }
+.input-wrap { position: relative; }
+.input-field {
+  width: 100%; padding: 12px 16px; border-radius: 11px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+  color: white; font-size: 14px; font-family: Inter,sans-serif;
+  outline: none; transition: all 0.2s;
+}
+.input-field::placeholder { color: rgba(255,255,255,0.22); }
+.input-field:focus { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.06); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+
+.input-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.2); font-size: 15px; }
+
+.row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.remember { display: flex; align-items: center; gap: 7px; font-size: 12px; color: rgba(255,255,255,0.35); cursor: pointer; }
+.remember input { accent-color: #6366f1; }
+.forgot { font-size: 12px; color: #a5b4fc; cursor: pointer; text-decoration: none; transition: color 0.2s; }
+.forgot:hover { color: #818cf8; }
+
+.btn-submit {
+  width: 100%; padding: 13px; border-radius: 11px; font-size: 15px; font-weight: 700;
+  border: none; cursor: pointer; font-family: Inter,sans-serif;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white; margin-bottom: 20px;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.4), 0 8px 24px rgba(99,102,241,0.3);
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-submit:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(99,102,241,0.6), 0 14px 32px rgba(99,102,241,0.45); }
+
+.divider-text { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.divider-text::before,.divider-text::after { content:''; flex:1; height:1px; background: rgba(255,255,255,0.07); }
+.divider-text span { font-size: 11px; color: rgba(255,255,255,0.2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.btn-google {
+  width: 100%; padding: 12px; border-radius: 11px; font-size: 14px; font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.7); cursor: pointer; font-family: Inter,sans-serif;
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 24px;
+}
+.btn-google:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: white; }
+.google-icon { width: 18px; height: 18px; }
+
+.switch-text { text-align: center; font-size: 13px; color: rgba(255,255,255,0.3); }
+.switch-link { color: #a5b4fc; cursor: pointer; font-weight: 600; transition: color 0.2s; }
+.switch-link:hover { color: #818cf8; }
+
+/* register extras */
+.name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.strength { margin-top: 8px; }
+.strength-bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.06); overflow: hidden; margin-bottom: 5px; }
+.strength-fill { height: 100%; width: 60%; background: linear-gradient(90deg,#f59e0b,#6366f1); border-radius: 2px; transition: width 0.3s; }
+.strength-label { font-size: 10px; color: rgba(255,255,255,0.25); font-family: 'JetBrains Mono',monospace; }
+
+/* ════════════════════════════════
+   VARIANT 2 — SPLIT SCREEN
+════════════════════════════════ */
+#v2 { align-items: stretch; position: relative; }
+#v2 .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: rgba(4,8,15,0.6); }
+
+#v2 .left {
+  flex: 1; position: relative; z-index: 2;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: 80px 60px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  background: rgba(4,8,15,0.3);
+}
+#v2 .left-logo { display: flex; align-items: center; gap: 12px; position: absolute; top: 40px; left: 48px; }
+#v2 .left-logo-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg,#6366f1,#f59e0b); display: flex; align-items: center; justify-content: center; font-size: 17px; box-shadow: 0 0 20px rgba(99,102,241,0.4); }
+#v2 .left-logo-name { font-weight: 800; font-size: 17px; letter-spacing: -0.03em; }
+
+#v2 .left-title { font-size: 52px; font-weight: 900; letter-spacing: -0.05em; line-height: 1.0; margin-bottom: 20px; text-align: center; }
+#v2 .left-title .grad { background: linear-gradient(135deg,#fff 0%,#c7d2fe 40%,#a5b4fc 60%,#fde68a 80%,#f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+#v2 .left-sub { font-size: 14px; color: rgba(255,255,255,0.3); text-align: center; line-height: 1.7; max-width: 300px; margin-bottom: 40px; }
+#v2 .left-stats { display: flex; gap: 28px; }
+#v2 .ls { text-align: center; }
+#v2 .ls-v { font-family: 'JetBrains Mono',monospace; font-size: 22px; font-weight: 700; background: linear-gradient(135deg,#a5b4fc,#fde68a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+#v2 .ls-l { font-size: 10px; color: rgba(255,255,255,0.22); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+
+#v2 .right {
+  width: 480px; flex-shrink: 0; position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  padding: 60px 48px;
+  background: rgba(3,5,13,0.8);
+  backdrop-filter: blur(40px);
+}
+#v2 .form-box { width: 100%; }
+#v2 h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px; }
+#v2 .sub { font-size: 13px; color: rgba(255,255,255,0.32); margin-bottom: 32px; }
+#v2 .btn-submit { width: 100%; padding: 13px; border-radius: 11px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; font-family: Inter,sans-serif; background: linear-gradient(135deg,#6366f1,#4f46e5); color: white; margin-bottom: 20px; box-shadow: 0 0 0 1px rgba(99,102,241,0.4),0 8px 24px rgba(99,102,241,0.3); transition: all 0.2s; }
+#v2 .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(99,102,241,0.6),0 14px 32px rgba(99,102,241,0.45); }
+
+/* ════════════════════════════════
+   VARIANT 3 — MINIMAL FLOATING
+════════════════════════════════ */
+#v3 { align-items: center; justify-content: center; position: relative; flex-direction: column; }
+#v3 .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(4,8,15,0.3) 0%, rgba(4,8,15,0.92) 100%); }
+
+#v3 .top-logo {
+  position: relative; z-index: 2; display: flex; align-items: center; gap: 10px;
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10;
+}
+#v3 .top-logo-mark { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg,#6366f1,#f59e0b); display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 0 16px rgba(99,102,241,0.4); }
+#v3 .top-logo-name { font-weight: 800; font-size: 16px; letter-spacing: -0.03em; }
+
+#v3 .card {
+  position: relative; z-index: 2; width: 400px; padding: 40px 36px;
+  background: rgba(4,8,15,0.7);
+  backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 28px;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.05), 0 40px 100px rgba(0,0,0,0.6);
+}
+/* Animated border glow */
+#v3 .card::after {
+  content: ''; position: absolute; inset: -1px; border-radius: 28px; z-index: -1;
+  background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(245,158,11,0.15), rgba(99,102,241,0.1), rgba(245,158,11,0.25));
+  animation: border-spin 4s linear infinite;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude; padding: 1px;
+}
+@keyframes border-spin { 0%{filter:hue-rotate(0deg)} 100%{filter:hue-rotate(360deg)} }
+
+#v3 .tabs-row { display: flex; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 4px; margin-bottom: 28px; }
+#v3 .tab-btn { flex: 1; padding: 9px; border-radius: 9px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; font-family: Inter,sans-serif; background: transparent; color: rgba(255,255,255,0.35); transition: all 0.2s; }
+#v3 .tab-btn.active { background: linear-gradient(135deg,#6366f1,#4f46e5); color: white; box-shadow: 0 4px 16px rgba(99,102,241,0.35); }
+
+#v3 h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 5px; }
+#v3 .sub { font-size: 12.5px; color: rgba(255,255,255,0.3); margin-bottom: 24px; }
+
+#v3 .social-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+#v3 .btn-social { padding: 11px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.6); cursor: pointer; font-family: Inter,sans-serif; font-size: 13px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+#v3 .btn-social:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); color: white; }
+
+#v3 .btn-submit { width: 100%; padding: 13px; border-radius: 11px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; font-family: Inter,sans-serif; background: linear-gradient(135deg,#6366f1,#4f46e5,#7c3aed); color: white; margin-top: 4px; box-shadow: 0 0 0 1px rgba(99,102,241,0.4),0 8px 28px rgba(99,102,241,0.35); transition: all 0.2s; }
+#v3 .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(99,102,241,0.6),0 16px 40px rgba(99,102,241,0.5); }
+
+#v3 .terms { font-size: 11px; color: rgba(255,255,255,0.2); text-align: center; margin-top: 18px; line-height: 1.6; }
+#v3 .terms a { color: rgba(165,180,252,0.6); cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- ── Selector bar ── -->
+<div class="bar">
+  <span class="bar-label">Вариант</span>
+  <button class="sel active" onclick="showV(1)">① Центральная карточка</button>
+  <button class="sel" onclick="showV(2)">② Сплит-экран</button>
+  <button class="sel" onclick="showV(3)">③ Минимал с табами</button>
+  <span style="margin-left:16px; color:rgba(255,255,255,0.15); font-size:11px;">|</span>
+  <button class="tab active" id="tab-login" onclick="showTab('login')" style="margin-left:8px;">Вход</button>
+  <button class="tab" id="tab-reg" onclick="showTab('reg')">Регистрация</button>
+</div>
+
+<!-- ── BG Canvas ── -->
+<canvas class="bg" id="bgc"></canvas>
+
+<!-- ══════════ VARIANT 1 ══════════ -->
+<div id="v1" class="page active">
+  <div class="vignette"></div>
+
+  <!-- LOGIN -->
+  <div class="card" id="v1-login">
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-name">Aetheris</span>
+    </div>
+    <h2>С возвращением</h2>
+    <p class="sub">Войди в аккаунт чтобы продолжить</p>
+
+    <div class="input-group">
+      <label class="input-label">Email</label>
+      <div class="input-wrap">
+        <input class="input-field" type="email" placeholder="you@example.com">
+        <span class="input-icon">✉</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Пароль</label>
+      <div class="input-wrap">
+        <input class="input-field" type="password" placeholder="••••••••">
+        <span class="input-icon">🔒</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <label class="remember"><input type="checkbox"> Запомнить меня</label>
+      <a class="forgot">Забыл пароль?</a>
+    </div>
+
+    <button class="btn-submit">Войти →</button>
+
+    <div class="divider-text"><span>или</span></div>
+
+    <button class="btn-google">
+      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Продолжить с Google
+    </button>
+
+    <p class="switch-text">Нет аккаунта? <span class="switch-link" onclick="showTab('reg')">Зарегистрироваться</span></p>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="card" id="v1-reg" style="display:none;">
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-name">Aetheris</span>
+    </div>
+    <h2>Создать аккаунт</h2>
+    <p class="sub">Бесплатно · Навсегда</p>
+
+    <div class="name-row">
+      <div class="input-group">
+        <label class="input-label">Имя</label>
+        <input class="input-field" type="text" placeholder="Алексей">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Фамилия</label>
+        <input class="input-field" type="text" placeholder="Иванов">
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Никнейм</label>
+      <div class="input-wrap">
+        <input class="input-field" type="text" placeholder="algo_master">
+        <span class="input-icon" style="font-family:'JetBrains Mono',monospace;font-size:11px;">@</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Email</label>
+      <input class="input-field" type="email" placeholder="you@example.com">
+    </div>
+    <div class="input-group">
+      <label class="input-label">Пароль</label>
+      <div class="input-wrap">
+        <input class="input-field" type="password" placeholder="Минимум 8 символов">
+        <span class="input-icon">🔒</span>
+      </div>
+      <div class="strength">
+        <div class="strength-bar"><div class="strength-fill"></div></div>
+        <span class="strength-label">Надёжность: средняя</span>
+      </div>
+    </div>
+
+    <button class="btn-submit" style="margin-top:8px;">Создать аккаунт →</button>
+    <div class="divider-text"><span>или</span></div>
+    <button class="btn-google">
+      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Зарегистрироваться через Google
+    </button>
+    <p class="switch-text">Уже есть аккаунт? <span class="switch-link" onclick="showTab('login')">Войти</span></p>
+  </div>
+</div>
+
+
+<!-- ══════════ VARIANT 2 ══════════ -->
+<div id="v2" class="page">
+  <div class="vignette"></div>
+
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div class="left-logo">
+      <div class="left-logo-mark">⚡</div>
+      <span class="left-logo-name">Aetheris</span>
+    </div>
+    <div class="left-title">
+      <span class="grad">Compete.<br>Win.<br>Repeat.</span>
+    </div>
+    <p class="left-sub">Олимпиадная платформа с AI-наставником, дуэлями и умным судьёй.</p>
+    <div class="left-stats">
+      <div class="ls"><div class="ls-v">50K+</div><div class="ls-l">Участников</div></div>
+      <div class="ls"><div class="ls-v">10K+</div><div class="ls-l">Задач</div></div>
+      <div class="ls"><div class="ls-v">AI</div><div class="ls-l">Наставник</div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT FORM -->
+  <div class="right">
+    <!-- LOGIN -->
+    <div class="form-box" id="v2-login">
+      <h2>С возвращением</h2>
+      <p class="sub">Войди в свой аккаунт</p>
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input class="input-field" type="email" placeholder="you@example.com">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Пароль</label>
+        <div class="input-wrap">
+          <input class="input-field" type="password" placeholder="••••••••">
+          <span class="input-icon">🔒</span>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:24px;">
+        <label class="remember"><input type="checkbox"> Запомнить</label>
+        <a class="forgot">Забыл пароль?</a>
+      </div>
+      <button class="btn-submit">Войти →</button>
+      <div class="divider-text"><span>или</span></div>
+      <button class="btn-google">
+        <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Google
+      </button>
+      <p class="switch-text">Нет аккаунта? <span class="switch-link" onclick="showTab('reg')">Зарегистрироваться</span></p>
+    </div>
+    <!-- REGISTER -->
+    <div class="form-box" id="v2-reg" style="display:none;">
+      <h2>Создать аккаунт</h2>
+      <p class="sub">Бесплатно · Навсегда</p>
+      <div class="name-row">
+        <div class="input-group"><label class="input-label">Никнейм</label><input class="input-field" type="text" placeholder="algo_master"></div>
+        <div class="input-group"><label class="input-label">Имя</label><input class="input-field" type="text" placeholder="Алексей"></div>
+      </div>
+      <div class="input-group"><label class="input-label">Email</label><input class="input-field" type="email" placeholder="you@example.com"></div>
+      <div class="input-group">
+        <label class="input-label">Пароль</label>
+        <input class="input-field" type="password" placeholder="Минимум 8 символов">
+        <div class="strength" style="margin-top:8px;"><div class="strength-bar"><div class="strength-fill"></div></div><span class="strength-label">Надёжность: средняя</span></div>
+      </div>
+      <button class="btn-submit" style="margin-top:16px;">Создать аккаунт →</button>
+      <div class="divider-text"><span>или</span></div>
+      <button class="btn-google">
+        <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Google
+      </button>
+      <p class="switch-text">Уже есть аккаунт? <span class="switch-link" onclick="showTab('login')">Войти</span></p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ VARIANT 3 ══════════ -->
+<div id="v3" class="page">
+  <div class="vignette"></div>
+  <div class="top-logo" style="position:fixed;top:68px;left:50%;transform:translateX(-50%);z-index:10;display:flex;align-items:center;gap:10px;">
+    <div class="top-logo-mark">⚡</div>
+    <span class="top-logo-name">Aetheris</span>
+  </div>
+
+  <!-- CARD -->
+  <div class="card" style="margin-top:20px;">
+    <div class="tabs-row">
+      <button class="tab-btn active" id="v3-tab-login" onclick="v3tab('login')">Войти</button>
+      <button class="tab-btn" id="v3-tab-reg" onclick="v3tab('reg')">Регистрация</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="v3-login">
+      <h2>Добро пожаловать</h2>
+      <p class="sub">Войди чтобы продолжить соревноваться</p>
+      <div class="social-row">
+        <button class="btn-social">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google
+        </button>
+        <button class="btn-social">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </button>
+      </div>
+      <div class="divider-text"><span>или email</span></div>
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input class="input-field" type="email" placeholder="you@example.com">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Пароль</label>
+        <div class="input-wrap">
+          <input class="input-field" type="password" placeholder="••••••••">
+          <span class="input-icon">🔒</span>
+        </div>
+      </div>
+      <div style="text-align:right;margin-bottom:20px;margin-top:-6px;">
+        <a class="forgot" style="font-size:12px;color:#a5b4fc;cursor:pointer;">Забыл пароль?</a>
+      </div>
+      <button class="btn-submit">Войти в Aetheris →</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="v3-reg" style="display:none;">
+      <h2>Начни бесплатно</h2>
+      <p class="sub">Присоединись к 50K+ участников</p>
+      <div class="social-row">
+        <button class="btn-social">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google
+        </button>
+        <button class="btn-social">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </button>
+      </div>
+      <div class="divider-text"><span>или email</span></div>
+      <div class="input-group">
+        <label class="input-label">Никнейм</label>
+        <div class="input-wrap">
+          <input class="input-field" type="text" placeholder="algo_master">
+          <span class="input-icon" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(165,180,252,0.5);">@</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input class="input-field" type="email" placeholder="you@example.com">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Пароль</label>
+        <input class="input-field" type="password" placeholder="Минимум 8 символов">
+        <div class="strength" style="margin-top:8px;"><div class="strength-bar"><div class="strength-fill"></div></div><span class="strength-label">Надёжность: средняя</span></div>
+      </div>
+      <button class="btn-submit" style="margin-top:8px;">Создать аккаунт →</button>
+      <p class="terms">Регистрируясь, ты соглашаешься с <a>Условиями</a> и <a>Политикой конфиденциальности</a></p>
+    </div>
+  </div>
+</div>
+
+
+<script>
+let curV = 1, curTab = 'login';
+
+function showV(n) {
+  curV = n;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sel').forEach((b,i) => b.classList.toggle('active', i===n-1));
+  document.getElementById('v'+n).classList.add('active');
+  applyTab();
+}
+
+function showTab(t) {
+  curTab = t;
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active', (i===0&&t==='login')||(i===1&&t==='reg')));
+  applyTab();
+}
+
+function applyTab() {
+  // v1
+  document.getElementById('v1-login').style.display = curTab==='login'?'':'none';
+  document.getElementById('v1-reg').style.display   = curTab==='reg'  ?'':'none';
+  // v2
+  document.getElementById('v2-login').style.display = curTab==='login'?'':'none';
+  document.getElementById('v2-reg').style.display   = curTab==='reg'  ?'':'none';
+  // v3 handled by v3tab
+  if(curTab==='login') v3tab('login');
+  if(curTab==='reg')   v3tab('reg');
+}
+
+function v3tab(t) {
+  curTab = t;
+  document.getElementById('v3-login').style.display = t==='login'?'':'none';
+  document.getElementById('v3-reg').style.display   = t==='reg'  ?'':'none';
+  document.getElementById('v3-tab-login').classList.toggle('active', t==='login');
+  document.getElementById('v3-tab-reg').classList.toggle('active',   t==='reg');
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active', (i===0&&t==='login')||(i===1&&t==='reg')));
+}
+
+/* ── Graph background (shared) ── */
+const bgc = document.getElementById('bgc');
+const bctx = bgc.getContext('2d');
+function resizeBg() { bgc.width = window.innerWidth * devicePixelRatio; bgc.height = window.innerHeight * devicePixelRatio; bctx.scale(devicePixelRatio, devicePixelRatio); }
+resizeBg(); window.addEventListener('resize', resizeBg);
+const BW = () => bgc.offsetWidth, BH = () => bgc.offsetHeight;
+let bmx = BW()/2, bmy = BH()/2;
+window.addEventListener('mousemove', e => { bmx = e.clientX; bmy = e.clientY; });
+
+const LABELS = ['Graph','DP','Greedy','Math','BFS','DFS','Sort','Hash','Heap','Binary','Floyd','Dijkstra'];
+const nodes = Array.from({length:45},(_,i)=>{ const a=(i/45)*Math.PI*2,r=60+Math.random()*Math.max(BW(),BH())*.38; return{x:BW()/2+Math.cos(a)*r,y:BH()/2+Math.sin(a)*r,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,r:Math.random()*2+0.5,pulse:Math.random()*Math.PI*2,speed:Math.random()*.012+.005,label:Math.random()>.6?LABELS[Math.floor(Math.random()*LABELS.length)]:null}; });
+const edges=[];for(let i=0;i<nodes.length;i++){const k=Math.floor(Math.random()*3)+1;for(let j=0;j<k;j++)edges.push([i,Math.floor(Math.random()*nodes.length)]);}
+let pkts=[],lastP=0;
+
+function drawBg(ts) {
+  const w=BW(),h=BH(); bctx.clearRect(0,0,w,h);
+  const g1=bctx.createRadialGradient(w*.3,h*.3,0,w*.3,h*.3,w*.55); g1.addColorStop(0,'rgba(99,102,241,0.13)');g1.addColorStop(1,'rgba(4,8,15,0)'); bctx.fillStyle=g1;bctx.fillRect(0,0,w,h);
+  const g2=bctx.createRadialGradient(w*.75,h*.7,0,w*.75,h*.7,w*.4); g2.addColorStop(0,'rgba(245,158,11,0.07)');g2.addColorStop(1,'rgba(4,8,15,0)'); bctx.fillStyle=g2;bctx.fillRect(0,0,w,h);
+  const mdx=(bmx-w/2)*.012,mdy=(bmy-h/2)*.012;
+  nodes.forEach(n=>{n.x+=n.vx;n.y+=n.vy;n.pulse+=n.speed;if(n.x<0||n.x>w)n.vx*=-1;if(n.y<0||n.y>h)n.vy*=-1;});
+  edges.forEach(([i,j])=>{const a=nodes[i],b=nodes[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy);if(d>200)return;bctx.beginPath();bctx.moveTo(a.x+mdx,a.y+mdy);bctx.lineTo(b.x+mdx,b.y+mdy);bctx.strokeStyle=`rgba(99,102,241,${(1-d/200)*.09})`;bctx.lineWidth=.6;bctx.stroke();});
+  if(ts-lastP>280){pkts.push({e:edges[Math.floor(Math.random()*edges.length)],t:0,sp:.008+Math.random()*.005});lastP=ts;}
+  pkts=pkts.filter(p=>p.t<=1);
+  pkts.forEach(p=>{p.t+=p.sp;const a=nodes[p.e[0]],b=nodes[p.e[1]],x=a.x+(b.x-a.x)*p.t+mdx,y=a.y+(b.y-a.y)*p.t+mdy;bctx.beginPath();bctx.arc(x,y,2,0,Math.PI*2);bctx.fillStyle='rgba(165,180,252,0.8)';bctx.fill();bctx.beginPath();bctx.arc(x,y,5,0,Math.PI*2);bctx.fillStyle='rgba(99,102,241,0.1)';bctx.fill();});
+  nodes.forEach(n=>{const px=n.x+mdx,py=n.y+mdy,pl=Math.sin(n.pulse)*.5+.5;bctx.beginPath();bctx.arc(px,py,n.r+3,0,Math.PI*2);bctx.fillStyle=`rgba(99,102,241,${.03+pl*.05})`;bctx.fill();bctx.beginPath();bctx.arc(px,py,n.r,0,Math.PI*2);bctx.fillStyle=`rgba(165,180,252,${.4+pl*.4})`;bctx.fill();if(n.label){bctx.font='9px Inter,sans-serif';bctx.fillStyle=`rgba(165,180,252,${.22+pl*.18})`;bctx.textAlign='center';bctx.fillText(n.label,px,py-n.r-4);}});
+  requestAnimationFrame(drawBg);
+}
+requestAnimationFrame(drawBg);
+</script>
+</body>
+</html>

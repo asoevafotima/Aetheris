@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Background Variants</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Inter,sans-serif;background:#000;color:#fff}
+.bar{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(0,0,0,0.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.08);padding:10px 24px;display:flex;align-items:center;gap:8px}
+.bl{font-size:11px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:.1em;text-transform:uppercase;margin-right:6px}
+.btn{padding:7px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;font-size:12px;font-family:inherit;font-weight:600;transition:all .2s}
+.btn:hover{color:#fff;border-color:rgba(255,255,255,0.3)}
+.btn.on{background:#fff;color:#000;border-color:#fff}
+.pg{display:none;position:relative;width:100%;height:100vh}
+.pg.on{display:block}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.ui{position:relative;z-index:1;padding:100px 60px 40px;pointer-events:none}
+.tag{font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:.18em;text-transform:uppercase;font-family:monospace;margin-bottom:10px}
+.title{font-size:48px;font-weight:900;letter-spacing:-.04em;line-height:1}
+.sub{font-size:15px;color:rgba(255,255,255,0.35);margin-top:10px}
+.badge{display:inline-block;margin-top:18px;padding:6px 16px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:.06em}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="bl">Вариант фона</span>
+  <button class="btn on" onclick="show(1)">① Звёздное небо</button>
+  <button class="btn"    onclick="show(2)">② Матрица / Дождь</button>
+  <button class="btn"    onclick="show(3)">③ Аврора / Волны</button>
+</div>
+
+<!-- ══════ 1: STARFIELD ══════ -->
+<div id="p1" class="pg on">
+  <canvas id="c1"></canvas>
+  <div class="ui">
+    <div class="tag">Вариант 1 — Звёздное небо</div>
+    <div class="title">Тихое <span style="background:linear-gradient(135deg,#a5b4fc,#fde68a);-webkit-background-clip:text;-webkit-text-fill-color:transparent">космическое</span><br>пространство</div>
+    <div class="sub">Медленно дрейфующие звёзды, редкие кометы, глубокое ощущение глубины.<br>Минималистично. Не отвлекает. Всегда уместно.</div>
+    <div class="badge" style="background:rgba(165,180,252,0.12);border:1px solid rgba(165,180,252,0.3);color:#a5b4fc">★ Subtle · Космос · Спокойный</div>
+  </div>
+</div>
+
+<!-- ══════ 2: MATRIX RAIN ══════ -->
+<div id="p2" class="pg">
+  <canvas id="c2"></canvas>
+  <div class="ui">
+    <div class="tag">Вариант 2 — Матрица / Дождь</div>
+    <div class="title">Код <span style="background:linear-gradient(135deg,#4ade80,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">падает</span><br>сверху вниз</div>
+    <div class="sub">Падающие столбцы символов как в Matrix, но адаптировано под алгоритмы.<br>Динамично. Технично. Подходит для хакатона.</div>
+    <div class="badge" style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:#4ade80">⚡ Dynamic · Матрица · Технично</div>
+  </div>
+</div>
+
+<!-- ══════ 3: AURORA ══════ -->
+<div id="p3" class="pg">
+  <canvas id="c3"></canvas>
+  <div class="ui">
+    <div class="tag">Вариант 3 — Аврора / Волны</div>
+    <div class="title">Плавные <span style="background:linear-gradient(135deg,#818cf8,#34d399,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">цветные</span><br>волны</div>
+    <div class="sub">Медленно перетекающие цветовые облака. Как северное сияние.<br>Атмосферно. Премиально. Выглядит как Stripe или Linear.</div>
+    <div class="badge" style="background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.3);color:#818cf8">✦ Premium · Аврора · Атмосфера</div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// SWITCHER
+// ─────────────────────────────────────────────
+function show(n) {
+  document.querySelectorAll('.pg').forEach((p,i) => p.classList.toggle('on', i+1===n));
+  document.querySelectorAll('.btn').forEach((b,i) => b.classList.toggle('on', i+1===n));
+}
+
+// ─────────────────────────────────────────────
+// VARIANT 1 — STARFIELD
+// ─────────────────────────────────────────────
+(function() {
+  const cv = document.getElementById('c1');
+  const cx = cv.getContext('2d');
+  let W, H, stars = [], comets = [];
+
+  function init() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    stars = Array.from({length: 280}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      r: 0.3 + Math.random()*1.4,
+      a: 0.15 + Math.random()*0.7,
+      ta: 0.15 + Math.random()*0.7,
+      pulse: 0.003 + Math.random()*0.008,
+      // parallax layer
+      layer: Math.random(),
+    }));
+    comets = [];
+  }
+
+  function spawnComet() {
+    if (comets.length > 3) return;
+    comets.push({
+      x: Math.random()*W*0.6,
+      y: Math.random()*H*0.4,
+      vx: 3 + Math.random()*4,
+      vy: 1.5 + Math.random()*2,
+      len: 80 + Math.random()*120,
+      life: 1,
+    });
+  }
+
+  let mx = 0.5, my = 0.5;
+  window.addEventListener('mousemove', e => { mx = e.clientX/window.innerWidth; my = e.clientY/window.innerHeight; });
+
+  function frame() {
+    requestAnimationFrame(frame);
+    if (!document.getElementById('p1').classList.contains('on')) return;
+
+    cx.fillStyle = '#02040a';
+    cx.fillRect(0, 0, W, H);
+
+    // deep nebula
+    const neb = cx.createRadialGradient(W*.35, H*.4, 0, W*.35, H*.4, W*.55);
+    neb.addColorStop(0, 'rgba(30,27,75,0.55)');
+    neb.addColorStop(.5, 'rgba(15,23,42,0.3)');
+    neb.addColorStop(1, 'rgba(2,4,10,0)');
+    cx.fillStyle = neb; cx.fillRect(0,0,W,H);
+
+    const neb2 = cx.createRadialGradient(W*.75, H*.65, 0, W*.75, H*.65, W*.4);
+    neb2.addColorStop(0, 'rgba(49,18,60,0.35)');
+    neb2.addColorStop(1, 'rgba(2,4,10,0)');
+    cx.fillStyle = neb2; cx.fillRect(0,0,W,H);
+
+    // stars
+    const pw = (mx-.5)*10, ph = (my-.5)*10;
+    for (const s of stars) {
+      const px = s.x + pw * s.layer;
+      const py = s.y + ph * s.layer;
+      s.a += (s.ta - s.a) * s.pulse;
+      if (Math.abs(s.a - s.ta) < 0.01) s.ta = 0.1 + Math.random()*0.7;
+      cx.beginPath();
+      cx.arc(px, py, s.r, 0, Math.PI*2);
+      const hue = s.layer > 0.7 ? '220,230,255' : s.layer > 0.4 ? '255,255,255' : '200,220,255';
+      cx.fillStyle = `rgba(${hue},${s.a.toFixed(2)})`;
+      cx.fill();
+      // glow for big stars
+      if (s.r > 1.2) {
+        const g = cx.createRadialGradient(px,py,0,px,py,s.r*5);
+        g.addColorStop(0, `rgba(180,200,255,${(s.a*0.3).toFixed(2)})`);
+        g.addColorStop(1, 'rgba(180,200,255,0)');
+        cx.fillStyle = g;
+        cx.beginPath(); cx.arc(px,py,s.r*5,0,Math.PI*2); cx.fill();
+      }
+    }
+
+    // comets
+    if (Math.random() < 0.004) spawnComet();
+    for (const c of comets) {
+      const g = cx.createLinearGradient(c.x-c.len*c.vx/5, c.y-c.len*c.vy/5, c.x, c.y);
+      g.addColorStop(0, 'rgba(200,220,255,0)');
+      g.addColorStop(.7, `rgba(220,235,255,${(c.life*0.4).toFixed(2)})`);
+      g.addColorStop(1, `rgba(255,255,255,${(c.life*0.9).toFixed(2)})`);
+      cx.strokeStyle = g; cx.lineWidth = 1.5;
+      cx.beginPath(); cx.moveTo(c.x-c.len*c.vx/5, c.y-c.len*c.vy/5); cx.lineTo(c.x, c.y); cx.stroke();
+      c.x += c.vx; c.y += c.vy; c.life -= 0.012;
+    }
+    comets.splice(0, comets.length, ...comets.filter(c => c.life > 0 && c.x < W+200 && c.y < H+200));
+  }
+
+  init();
+  window.addEventListener('resize', init);
+  frame();
+})();
+
+
+// ─────────────────────────────────────────────
+// VARIANT 2 — MATRIX RAIN
+// ─────────────────────────────────────────────
+(function() {
+  const cv = document.getElementById('c2');
+  const cx = cv.getContext('2d');
+  let W, H, cols = [], FONT = 13;
+
+  const CHARS = 'アイウエオカキクケコサシスセソBFSDPGraphMathHashO(n)log→←∑∫∀∃01';
+
+  function init() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    const numCols = Math.floor(W / FONT);
+    cols = Array.from({length: numCols}, () => ({
+      y: Math.random() * -H,
+      speed: 0.8 + Math.random()*1.8,
+      bright: Math.random() > 0.85,
+      chars: Array.from({length: Math.floor(H/FONT)+2}, () =>
+        CHARS[Math.floor(Math.random()*CHARS.length)]
+      ),
+      headColor: Math.random() > 0.5 ? '#ffffff' : '#a5f3fc',
+    }));
+  }
+
+  function frame() {
+    requestAnimationFrame(frame);
+    if (!document.getElementById('p2').classList.contains('on')) return;
+
+    // fade trail
+    cx.fillStyle = 'rgba(2,8,18,0.18)';
+    cx.fillRect(0, 0, W, H);
+
+    cx.font = `${FONT}px "JetBrains Mono",monospace`;
+
+    for (let i = 0; i < cols.length; i++) {
+      const c = cols[i];
+      const x = i * FONT;
+      const numVisible = Math.ceil((H - c.y) / FONT);
+
+      for (let j = 0; j < Math.min(numVisible, c.chars.length); j++) {
+        const cy = c.y + j * FONT;
+        if (cy < 0 || cy > H) continue;
+        const distFromHead = numVisible - j;
+        let alpha, color;
+
+        if (distFromHead === 0) {
+          // head — bright white/cyan
+          alpha = 1;
+          color = c.headColor;
+        } else if (distFromHead < 4) {
+          alpha = 0.6 - distFromHead * 0.12;
+          color = c.bright ? '#4ade80' : '#22d3ee';
+        } else {
+          alpha = Math.max(0, 0.35 - distFromHead * 0.025);
+          color = c.bright ? '#16a34a' : '#0e7490';
+        }
+
+        cx.fillStyle = color.startsWith('#')
+          ? color + Math.round(alpha*255).toString(16).padStart(2,'0')
+          : color;
+        cx.globalAlpha = alpha;
+        cx.fillText(c.chars[j % c.chars.length], x, cy);
+
+        // occasionally mutate char
+        if (Math.random() < 0.015) c.chars[j % c.chars.length] = CHARS[Math.floor(Math.random()*CHARS.length)];
+      }
+
+      c.y += c.speed;
+      if (c.y > H + FONT * 5) {
+        c.y = -FONT * (8 + Math.random()*20);
+        c.speed = 0.8 + Math.random()*1.8;
+        c.bright = Math.random() > 0.85;
+      }
+    }
+    cx.globalAlpha = 1;
+
+    // scanline subtle overlay
+    cx.fillStyle = 'rgba(0,10,5,0.04)';
+    for (let y = 0; y < H; y += 3) { cx.fillRect(0, y, W, 1); }
+  }
+
+  init();
+  window.addEventListener('resize', init);
+  frame();
+})();
+
+
+// ─────────────────────────────────────────────
+// VARIANT 3 — AURORA WAVES
+// ─────────────────────────────────────────────
+(function() {
+  const cv = document.getElementById('c3');
+  const cx = cv.getContext('2d');
+  let W, H, t = 0;
+  let mx = 0.5, my = 0.5;
+  window.addEventListener('mousemove', e => { mx = e.clientX/window.innerWidth; my = e.clientY/window.innerHeight; });
+
+  // small particles
+  let pts = [];
+  function init() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    pts = Array.from({length: 60}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      vx: (Math.random()-.5)*0.15, vy: (Math.random()-.5)*0.15,
+      r: 1 + Math.random()*2,
+      a: 0.1 + Math.random()*0.4,
+      ci: Math.floor(Math.random()*4),
+    }));
+  }
+
+  const COLS = [
+    [129,140,248], // indigo
+    [52,211,153],  // emerald
+    [251,191,36],  // amber
+    [236,72,153],  // pink
+  ];
+
+  function blob(x, y, r, rgb, alpha) {
+    const g = cx.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0, `rgba(${rgb},${alpha})`);
+    g.addColorStop(.5, `rgba(${rgb},${(alpha*.35).toFixed(3)})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    cx.fillStyle = g;
+    cx.beginPath(); cx.arc(x,y,r,0,Math.PI*2); cx.fill();
+  }
+
+  function frame() {
+    requestAnimationFrame(frame);
+    if (!document.getElementById('p3').classList.contains('on')) return;
+    t += 0.003;
+
+    cx.fillStyle = '#04050f';
+    cx.fillRect(0,0,W,H);
+
+    // aurora blobs — slow sinusoidal motion
+    const blobs = [
+      { x: W*(0.2 + 0.15*Math.sin(t*0.7))    + mx*30, y: H*(0.3 + 0.12*Math.cos(t*0.5))  + my*20, r: W*.42, rgb:'99,102,241',  a: 0.18 },
+      { x: W*(0.75 + 0.12*Math.cos(t*0.6))   - mx*25, y: H*(0.25 + 0.1*Math.sin(t*0.8))  - my*15, r: W*.38, rgb:'52,211,153',  a: 0.14 },
+      { x: W*(0.5  + 0.18*Math.sin(t*0.4+1)) + mx*20, y: H*(0.65 + 0.15*Math.cos(t*0.55))+ my*25, r: W*.45, rgb:'245,158,11',  a: 0.10 },
+      { x: W*(0.85 + 0.1*Math.sin(t*0.9+2))  - mx*15, y: H*(0.6  + 0.08*Math.cos(t*0.7)) - my*10, r: W*.3,  rgb:'236,72,153',  a: 0.09 },
+      { x: W*(0.1  + 0.08*Math.cos(t*0.65))  + mx*10, y: H*(0.75 + 0.1*Math.sin(t*0.45)) + my*15, r: W*.28, rgb:'14,165,233',  a: 0.08 },
+    ];
+
+    for (const b of blobs) blob(b.x, b.y, b.r, b.rgb, b.a);
+
+    // horizontal wave bands
+    cx.save();
+    for (let band = 0; band < 3; band++) {
+      const yBase = H * (0.25 + band * 0.22 + 0.04 * Math.sin(t * 0.3 + band));
+      const rgb = COLS[band];
+      const path = new Path2D();
+      path.moveTo(0, H);
+      for (let x = 0; x <= W; x += 6) {
+        const wave =
+          12 * Math.sin(x / W * Math.PI * 4 + t * (0.8 + band * 0.3)) +
+           6 * Math.sin(x / W * Math.PI * 7 + t * (1.2 - band * 0.2) + 1) +
+           4 * Math.sin(x / W * Math.PI * 12 + t * 1.5 + band);
+        const y = yBase + wave;
+        if (x === 0) path.moveTo(x, y); else path.lineTo(x, y);
+      }
+      path.lineTo(W, H); path.lineTo(0, H); path.closePath();
+      const wg = cx.createLinearGradient(0, yBase-20, 0, yBase+60);
+      wg.addColorStop(0, `rgba(${rgb},0.0)`);
+      wg.addColorStop(.4, `rgba(${rgb},0.07)`);
+      wg.addColorStop(1, `rgba(${rgb},0.0)`);
+      cx.fillStyle = wg;
+      cx.fill(path);
+    }
+    cx.restore();
+
+    // floating particles
+    for (const p of pts) {
+      const rgb = COLS[p.ci];
+      blob(p.x, p.y, p.r*8, rgb.join(','), p.a*0.5);
+      cx.fillStyle = `rgba(${rgb},${p.a})`;
+      cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, Math.PI*2); cx.fill();
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    }
+
+    // vignette
+    const vig = cx.createRadialGradient(W/2,H/2,H*.1,W/2,H/2,H*.85);
+    vig.addColorStop(0, 'rgba(4,5,15,0)');
+    vig.addColorStop(1, 'rgba(4,5,15,0.7)');
+    cx.fillStyle = vig; cx.fillRect(0,0,W,H);
+  }
+
+  init();
+  window.addEventListener('resize', init);
+  frame();
+})();
+</script>
+</body>
+</html>

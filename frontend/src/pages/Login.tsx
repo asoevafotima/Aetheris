@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Zap, Eye, EyeOff } from 'lucide-react';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { Zap, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { BackgroundGraph } from '../components/BackgroundGraph';
 
 function GoogleIcon() {
   return (
@@ -17,12 +16,15 @@ function GoogleIcon() {
   );
 }
 
+const itemV = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
+
 export function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, isLoading } = useAuthStore();
   const [form, setForm] = useState({ email: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
   const [error, setError] = useState(
     searchParams.get('error') === 'google_failed' ? 'Не удалось войти через Google. Попробуйте ещё раз.' : ''
   );
@@ -39,94 +41,140 @@ export function Login() {
     }
   };
 
+  const inp = (name: string): React.CSSProperties => ({
+    width: '100%',
+    background: 'rgba(255,255,255,0.04)',
+    border: `1px solid ${focused === name ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.09)'}`,
+    boxShadow: focused === name ? '0 0 0 3px rgba(99,102,241,0.1)' : 'none',
+    borderRadius: 11,
+    color: '#fff',
+    fontSize: 14,
+    outline: 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    padding: '11px 14px',
+    boxSizing: 'border-box' as const,
+  });
+
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl" />
+    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', background: '#04080f', overflow: 'hidden' }}>
+      <BackgroundGraph noSphere />
+
+      {/* Left panel */}
+      <div style={{
+        flex: 1, minHeight: '100vh',
+        background: 'rgba(4,8,15,0.3)',
+        borderRight: '1px solid rgba(255,255,255,0.05)',
+        position: 'relative', zIndex: 1,
+        display: 'flex', flexDirection: 'column',
+        padding: '44px 64px',
+      }}>
+        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#f59e0b)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Zap size={20} color="#fff" />
+          </div>
+          <span style={{ fontSize: 22, fontWeight: 900, background: 'linear-gradient(90deg,#fff,#a5b4fc,#fde68a)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Aetheris</span>
+        </Link>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', background: 'linear-gradient(135deg,#fff 0%,#c7d2fe 25%,#a5b4fc 50%,#fde68a 75%,#f59e0b 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+          >
+            Compete.<br />Win.<br />Repeat.
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.25 }}
+            style={{ color: 'rgba(255,255,255,0.5)', fontSize: 16, maxWidth: 380, lineHeight: 1.7, margin: 0 }}
+          >
+            Олимпиадная платформа с AI-наставником, дуэлями и умным судьёй.
+          </motion.p>
+        </div>
+
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.5 }} style={{ display: 'flex', gap: 48 }}>
+          {[['50K+', 'Участников'], ['10K+', 'Задач'], ['AI', 'Наставник']].map(([val, label]) => (
+            <div key={label}>
+              <div style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(90deg,#a5b4fc,#fde68a)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{val}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginTop: 3 }}>{label}</div>
+            </div>
+          ))}
+        </motion.div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md relative">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-11 h-11 rounded-xl bg-purple-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
-              <Zap size={22} className="text-white" />
-            </div>
-            <span className="text-2xl font-black gradient-text">Aetheris</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-[var(--text-1)] mb-1">Добро пожаловать!</h1>
-          <p className="text-[var(--text-3)] text-sm">Войдите в аккаунт, чтобы продолжить</p>
-        </div>
+      {/* Right panel */}
+      <motion.div
+        initial={{ opacity: 0, x: 48 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55 }}
+        style={{ flex: 1, minHeight: '100vh', background: 'rgba(3,5,13,0.85)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 64px' }}
+      >
+        <motion.div style={{ width: '100%', maxWidth: 400 }} initial="hidden" animate="show" transition={{ staggerChildren: 0.08 }}>
+          <motion.div variants={itemV} transition={{ duration: 0.42 }} style={{ marginBottom: 28 }}>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#fff', margin: '0 0 6px' }}>С возвращением</h2>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.42)', margin: 0 }}>Войди в свой аккаунт</p>
+          </motion.div>
 
-        <div className="card-theme rounded-2xl p-8">
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
+            <motion.div variants={itemV} transition={{ duration: 0.42 }} style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', fontSize: 13 }}>
               ⚠ {error}
-            </div>
+            </motion.div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <Input
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              icon={<Mail size={16} />}
-              value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              required
-            />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[var(--text-2)]">Пароль</label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]">
-                  <Lock size={16} />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  required
-                  className="input-theme w-full rounded-lg px-3 py-2.5 pl-9 pr-9 text-sm transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors cursor-pointer"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          <form onSubmit={handleSubmit}>
+            <motion.div variants={itemV} transition={{ duration: 0.42 }} style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginBottom: 7 }}>Email</label>
+              <input type="email" placeholder="you@example.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} required style={inp('email')} />
+            </motion.div>
+
+            <motion.div variants={itemV} transition={{ duration: 0.42 }} style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginBottom: 7 }}>Пароль</label>
+              <div style={{ position: 'relative' }}>
+                <input type={showPwd ? 'text' : 'password'} placeholder="••••••••" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} required style={{ ...inp('password'), paddingRight: 44 }} />
+                <button type="button" onClick={() => setShowPwd(!showPwd)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.32)', display: 'flex', alignItems: 'center', padding: 0 }}>
+                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-            </div>
+            </motion.div>
 
-            <Button type="submit" loading={isLoading} className="w-full mt-2" size="lg">
-              Войти
-            </Button>
+            <motion.div variants={itemV} transition={{ duration: 0.42 }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.42)' }}>
+                <input type="checkbox" style={{ accentColor: '#6366f1', width: 14, height: 14 }} />
+                Запомнить меня
+              </label>
+              <a href="#" style={{ fontSize: 13, color: '#818cf8', textDecoration: 'none' }}>Забыл пароль?</a>
+            </motion.div>
+
+            <motion.div variants={itemV} transition={{ duration: 0.42 }}>
+              <button type="submit" disabled={isLoading} style={{ width: '100%', padding: '13px', background: isLoading ? 'rgba(99,102,241,0.45)' : 'linear-gradient(135deg,#6366f1,#4f46e5)', boxShadow: '0 0 28px rgba(99,102,241,0.3)', border: 'none', borderRadius: 11, color: '#fff', fontSize: 15, fontWeight: 700, cursor: isLoading ? 'not-allowed' : 'pointer', transition: 'transform 0.15s' }}
+                onMouseEnter={e => { if (!isLoading) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
+                {isLoading ? 'Входим...' : 'Войти →'}
+              </button>
+            </motion.div>
           </form>
 
-          <div className="mt-5">
-            <div className="relative flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-[var(--border)]" />
-              <span className="text-xs text-[var(--text-3)]">или</span>
-              <div className="flex-1 h-px bg-[var(--border)]" />
-            </div>
+          <motion.div variants={itemV} transition={{ duration: 0.42 }} style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '22px 0' }}>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>или</span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+          </motion.div>
 
-            <a href="http://localhost:8000/auth/google/login" className="block">
-              <Button type="button" variant="outline" className="w-full" icon={<GoogleIcon />}>
-                Войти через Google
-              </Button>
+          <motion.div variants={itemV} transition={{ duration: 0.42 }}>
+            <a href="http://localhost:8000/auth/google/login" style={{ textDecoration: 'none' }}>
+              <button type="button" style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 11, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, transition: 'background 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+              >
+                <GoogleIcon /> Войти через Google
+              </button>
             </a>
-          </div>
+          </motion.div>
 
-          <div className="mt-5 text-center">
-            <p className="text-[var(--text-3)] text-sm">
-              Нет аккаунта?{' '}
-              <Link to="/register" className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
-                Зарегистрироваться
-              </Link>
-            </p>
-          </div>
-        </div>
+          <motion.p variants={itemV} transition={{ duration: 0.42 }} style={{ textAlign: 'center', marginTop: 22, fontSize: 13, color: 'rgba(255,255,255,0.38)' }}>
+            Нет аккаунта?{' '}
+            <Link to="/register" style={{ color: '#818cf8', fontWeight: 700, textDecoration: 'none' }}>Зарегистрироваться</Link>
+          </motion.p>
+        </motion.div>
       </motion.div>
     </div>
   );

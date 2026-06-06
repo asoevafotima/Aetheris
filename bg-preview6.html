@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Aetheris BG — Set 6</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#04080f;color:#fff;overflow:hidden}
+.bar{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(4,8,15,0.96);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,0.07);padding:9px 22px;display:flex;align-items:center;gap:6px}
+.bl{font-size:10px;font-weight:700;color:rgba(255,255,255,0.2);letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+.btn{padding:6px 14px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.36);cursor:pointer;font-size:11px;font-family:'Inter',sans-serif;font-weight:600;transition:all .15s}
+.btn:hover{color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.25)}
+.btn.on{background:rgba(255,255,255,0.95);color:#04080f;border-color:transparent}
+.pg{display:none;position:fixed;inset:0}
+.pg.on{display:block}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+.ov{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);z-index:2;pointer-events:none;text-align:center}
+.ov-tag{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:100px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);font-size:11px;color:rgba(255,255,255,0.45);font-weight:600;margin-bottom:20px}
+.dot{width:5px;height:5px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+.ov-h{font-size:80px;font-weight:900;letter-spacing:-.06em;line-height:.92;margin-bottom:14px}
+.g1{background:linear-gradient(135deg,#fff 30%,#93c5fd 60%,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g2{background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ov-sub{font-size:14px;color:rgba(255,255,255,0.28);margin-bottom:26px}
+.ov-btns{display:flex;gap:10px;justify-content:center}
+.ob1{padding:12px 28px;border-radius:100px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;box-shadow:0 0 30px rgba(245,158,11,.45);font-family:'Inter',sans-serif}
+.ob2{padding:12px 28px;border-radius:100px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,.65);font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.vn{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:2;pointer-events:none;font-size:10px;color:rgba(255,255,255,0.18);letter-spacing:.15em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="bar">
+  <span class="bl">Ещё варианты</span>
+  <button class="btn on" onclick="show(1)">① Молния / Плазма</button>
+  <button class="btn"    onclick="show(2)">② Водная рябь</button>
+  <button class="btn"    onclick="show(3)">③ Вихрь частиц</button>
+  <button class="btn"    onclick="show(4)">④ Схема платы</button>
+  <button class="btn"    onclick="show(5)">⑤ Фрактал Мандельброта</button>
+</div>
+<div id="p1" class="pg on"></div>
+<div id="p2" class="pg"></div>
+<div id="p3" class="pg"></div>
+<div id="p4" class="pg"></div>
+<div id="p5" class="pg"></div>
+<script>
+const VN=['Молния / Плазма','Водная рябь','Вихрь частиц','Схема платы','Фрактал Мандельброта'];
+function mkOv(i){return`<div class="ov"><div class="ov-tag"><div class="dot"></div>Season 2026 · Competitive Platform</div><div class="ov-h"><span class="g1">Aether</span><span class="g2">is</span></div><div class="ov-sub">Next-generation competitive programming platform</div><div class="ov-btns"><button class="ob1">Start for Free →</button><button class="ob2">Sign In</button></div></div><div class="vn">Вариант ${i+1} — ${VN[i]}</div>`;}
+for(let i=0;i<5;i++){const c=document.createElement('canvas');c.id='c'+(i+1);document.getElementById('p'+(i+1)).innerHTML=mkOv(i);document.getElementById('p'+(i+1)).prepend(c);}
+function show(n){document.querySelectorAll('.pg').forEach((p,i)=>p.classList.toggle('on',i+1===n));document.querySelectorAll('.btn').forEach((b,i)=>b.classList.toggle('on',i+1===n));}
+function orbs(cx,W,H,px,py){
+  const g1=cx.createRadialGradient(W*.13-px*.4,H*.37-py*.4,0,W*.13-px*.4,H*.37-py*.4,W*.44);
+  g1.addColorStop(0,'rgba(29,78,216,0.16)');g1.addColorStop(1,'rgba(0,0,0,0)');cx.fillStyle=g1;cx.fillRect(0,0,W,H);
+  const g2=cx.createRadialGradient(W*.86-px*.2,H*.58-py*.2,0,W*.86-px*.2,H*.58-py*.2,W*.33);
+  g2.addColorStop(0,'rgba(245,158,11,0.09)');g2.addColorStop(1,'rgba(0,0,0,0)');cx.fillStyle=g2;cx.fillRect(0,0,W,H);
+}
+
+// ══════════════════════════════════════════
+// 1 — PLASMA / LIGHTNING
+// Electric arcs jump between nodes.
+// Deep blue glow, crackling energy.
+// ══════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c1'),cx=cv.getContext('2d');
+  let W,H,t=0,nodes=[],bolts=[];
+  let mx=.5,my=.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/W;my=e.clientY/H});
+
+  function init(){
+    W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;
+    nodes=Array.from({length:16},()=>({
+      x:100+Math.random()*(W-200),y:80+Math.random()*(H-160),
+      vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.4,
+      charge:Math.random(),gold:Math.random()>.7,
+    }));
+    bolts=[];
+  }
+
+  function lightning(x1,y1,x2,y2,rough,depth){
+    if(depth<=0||rough<1.5){
+      cx.lineTo(x2,y2);return;
+    }
+    const mx2=(x1+x2)/2+(Math.random()-.5)*rough;
+    const my2=(y1+y2)/2+(Math.random()-.5)*rough;
+    lightning(x1,y1,mx2,my2,rough*.5,depth-1);
+    lightning(mx2,my2,x2,y2,rough*.5,depth-1);
+  }
+
+  function drawBolt(x1,y1,x2,y2,alpha,gold){
+    const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+    const rough=len*.35;
+    // glow layers
+    for(let g=3;g>=0;g--){
+      cx.save();
+      cx.strokeStyle=gold
+        ?`rgba(253,230,138,${(alpha*(g===0?.9:.15/(g+1))).toFixed(3)})`
+        :`rgba(147,197,253,${(alpha*(g===0?.8:.18/(g+1))).toFixed(3)})`;
+      cx.lineWidth=g===0?.6:2+g*2.5;
+      cx.shadowBlur=g===0?0:12+g*8;
+      cx.shadowColor=gold?'rgba(245,158,11,0.5)':'rgba(96,165,250,0.5)';
+      cx.beginPath();cx.moveTo(x1,y1);
+      lightning(x1,y1,x2,y2,rough,6);
+      cx.stroke();
+      cx.restore();
+    }
+  }
+
+  function spawnBolt(){
+    if(bolts.length>12)return;
+    const a=Math.floor(Math.random()*nodes.length);
+    let b=Math.floor(Math.random()*nodes.length);
+    if(b===a)b=(a+1)%nodes.length;
+    bolts.push({a,b,life:1,speed:.04+Math.random()*.06,gold:nodes[a].gold||nodes[b].gold});
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p1').classList.contains('on'))return;
+    t+=.01;
+
+    cx.fillStyle='rgba(3,5,14,0.22)';cx.fillRect(0,0,W,H);
+    // dark bg
+    cx.fillStyle='#03050e';
+    if(t<.02){cx.fillStyle='#03050e';cx.fillRect(0,0,W,H);}
+    orbs(cx,W,H,(mx-.5)*10,(my-.5)*8);
+
+    if(Math.random()<.15)spawnBolt();
+    for(const b of bolts)b.life-=b.speed;
+    bolts.splice(0,bolts.length,...bolts.filter(b=>b.life>0));
+
+    for(const b of bolts){
+      const na=nodes[b.a],nb=nodes[b.b];
+      drawBolt(na.x,na.y,nb.x,nb.y,b.life*.85,b.gold);
+    }
+
+    // mouse arc to nearest node
+    const mxp=mx*W,myp=my*H;
+    let nearest=null,nd=1e18;
+    for(const n of nodes){const d=(n.x-mxp)**2+(n.y-myp)**2;if(d<nd){nd=d;nearest=n;}}
+    if(nearest&&nd<(250*250))drawBolt(mxp,myp,nearest.x,nearest.y,.6,true);
+
+    // nodes
+    for(const n of nodes){
+      n.x+=n.vx;n.y+=n.vy;
+      if(n.x<80||n.x>W-80)n.vx*=-1;
+      if(n.y<60||n.y>H-60)n.vy*=-1;
+      const g=cx.createRadialGradient(n.x,n.y,0,n.x,n.y,20);
+      g.addColorStop(0,n.gold?'rgba(253,230,138,.7)':'rgba(147,197,253,.7)');
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=g;cx.beginPath();cx.arc(n.x,n.y,20,0,Math.PI*2);cx.fill();
+      cx.fillStyle=n.gold?'rgba(255,240,160,.95)':'rgba(200,230,255,.95)';
+      cx.beginPath();cx.arc(n.x,n.y,3,0,Math.PI*2);cx.fill();
+    }
+
+    const vig=cx.createRadialGradient(W/2,H/2,H*.1,W/2,H/2,H*.85);
+    vig.addColorStop(0,'rgba(3,5,14,0)');vig.addColorStop(1,'rgba(3,5,14,.7)');
+    cx.fillStyle=vig;cx.fillRect(0,0,W,H);
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ══════════════════════════════════════════
+// 2 — WATER RIPPLES / CAUSTICS
+// Dark deep water. Mouse creates ripples.
+// Gold caustic light patterns underneath.
+// ══════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c2'),cx=cv.getContext('2d');
+  let W,H,t=0,ripples=[],caustics=[];
+  let mx=.5,my=.5,pmx=.5,pmy=.5;
+  window.addEventListener('mousemove',e=>{
+    pmx=mx;pmy=my;mx=e.clientX/W;my=e.clientY/H;
+    if(Math.hypot((mx-pmx)*W,(my-pmy)*H)>3){
+      if(ripples.length<20)ripples.push({x:mx*W,y:my*H,r:0,life:1,speed:1.8+Math.random()*.8});
+    }
+  });
+  cv.addEventListener('click',e=>{
+    ripples.push({x:e.clientX,y:e.clientY,r:0,life:1,speed:2.5});
+  });
+
+  function init(){
+    W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;
+    caustics=Array.from({length:40},()=>({
+      x:Math.random(),y:Math.random(),
+      vx:(Math.random()-.5)*.0003,vy:(Math.random()-.5)*.0002,
+      r:30+Math.random()*80,a:.03+Math.random()*.08,phase:Math.random()*Math.PI*2,
+    }));
+    // auto ripples
+    setInterval(()=>{if(ripples.length<25)ripples.push({x:Math.random()*W,y:Math.random()*H,r:0,life:1,speed:.9+Math.random()*1.2});},1200);
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p2').classList.contains('on'))return;
+    t+=.012;
+
+    cx.fillStyle='#010810';cx.fillRect(0,0,W,H);
+
+    // deep water gradient
+    const dg=cx.createLinearGradient(0,0,0,H);
+    dg.addColorStop(0,'rgba(1,12,28,0.95)');
+    dg.addColorStop(.5,'rgba(2,18,40,0.6)');
+    dg.addColorStop(1,'rgba(1,8,20,0.9)');
+    cx.fillStyle=dg;cx.fillRect(0,0,W,H);
+
+    // caustic light patches (golden underwater light)
+    for(const c of caustics){
+      c.x+=c.vx;c.y+=c.vy;
+      if(c.x<0)c.x=1;if(c.x>1)c.x=0;
+      if(c.y<0)c.y=1;if(c.y>1)c.y=0;
+      const pulse=Math.sin(t*1.2+c.phase)*.5+.5;
+      const r=c.r*(0.7+pulse*.5);
+      const a=c.a*(0.5+pulse*.5);
+      const g=cx.createRadialGradient(c.x*W,c.y*H,0,c.x*W,c.y*H,r);
+      g.addColorStop(0,`rgba(180,140,40,${a})`);
+      g.addColorStop(.5,`rgba(100,80,20,${a*.3})`);
+      g.addColorStop(1,'rgba(100,80,20,0)');
+      cx.fillStyle=g;cx.beginPath();cx.arc(c.x*W,c.y*H,r,0,Math.PI*2);cx.fill();
+    }
+
+    // update & draw ripples
+    for(const r of ripples){
+      r.r+=r.speed;r.life-=r.speed*.009;
+      if(r.life<=0)continue;
+      const maxRings=4;
+      for(let ring=0;ring<maxRings;ring++){
+        const rr=Math.max(0,r.r-ring*28);
+        if(rr<=0)continue;
+        const a=r.life*(.35-ring*.07)*Math.max(0,1-rr/(W*.6));
+        if(a<=0)continue;
+        cx.strokeStyle=`rgba(100,160,255,${a.toFixed(3)})`;
+        cx.lineWidth=Math.max(.4,1.5-ring*.3)*r.life;
+        cx.beginPath();cx.arc(r.x,r.y,rr,0,Math.PI*2);cx.stroke();
+        // inner gold glint
+        if(ring===0){
+          cx.strokeStyle=`rgba(200,170,80,${(a*.4).toFixed(3)})`;
+          cx.lineWidth=.4;
+          cx.beginPath();cx.arc(r.x,r.y,rr*.95,0,Math.PI*2);cx.stroke();
+        }
+      }
+    }
+    ripples.splice(0,ripples.length,...ripples.filter(r=>r.life>0));
+
+    // surface shimmer lines
+    for(let i=0;i<6;i++){
+      const y=H*(.15+i*.13)+Math.sin(t*.4+i)*15;
+      const alpha=.025+Math.sin(t*.3+i)*.015;
+      const lg=cx.createLinearGradient(0,y,W,y);
+      lg.addColorStop(0,'rgba(100,160,255,0)');
+      lg.addColorStop(.2,`rgba(100,160,255,${alpha})`);
+      lg.addColorStop(.5,`rgba(180,200,255,${alpha*2})`);
+      lg.addColorStop(.8,`rgba(100,160,255,${alpha})`);
+      lg.addColorStop(1,'rgba(100,160,255,0)');
+      cx.strokeStyle=lg;cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(0,y);
+      for(let x=0;x<=W;x+=20)cx.lineTo(x,y+Math.sin(x*.015+t+i)*4);
+      cx.stroke();
+    }
+
+    const vig=cx.createRadialGradient(W/2,H/2,H*.08,W/2,H/2,H*.8);
+    vig.addColorStop(0,'rgba(1,8,20,0)');vig.addColorStop(1,'rgba(1,8,20,.7)');
+    cx.fillStyle=vig;cx.fillRect(0,0,W,H);
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ══════════════════════════════════════════
+// 3 — PARTICLE VORTEX
+// Thousands of particles sucked into a spiral
+// vortex. Cursor shifts the eye of the storm.
+// Blue core → gold outer ring.
+// ══════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c3'),cx=cv.getContext('2d');
+  let W,H,t=0,pts=[];
+  let mx=.5,my=.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/W;my=e.clientY/H});
+  const N=2200;
+
+  function init(){
+    W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;
+    pts=Array.from({length:N},()=>({
+      angle:Math.random()*Math.PI*2,
+      r:50+Math.pow(Math.random(),0.4)*Math.min(W,H)*.52,
+      speed:.008+Math.random()*.018,
+      drift:(Math.random()-.5)*.8,
+      size:.5+Math.random()*2,
+      layer:Math.random(),
+    }));
+    cx.fillStyle='#03060e';cx.fillRect(0,0,W,H);
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p3').classList.contains('on'))return;
+    t+=.01;
+
+    cx.fillStyle='rgba(3,6,14,.12)';cx.fillRect(0,0,W,H);
+
+    const CX=W/2+(mx-.5)*60,CY=H/2+(my-.5)*50;
+
+    // vortex eye glow
+    const eye=cx.createRadialGradient(CX,CY,0,CX,CY,100);
+    eye.addColorStop(0,'rgba(165,180,252,.35)');
+    eye.addColorStop(.4,'rgba(99,102,241,.12)');
+    eye.addColorStop(1,'rgba(99,102,241,0)');
+    cx.fillStyle=eye;cx.beginPath();cx.arc(CX,CY,100,0,Math.PI*2);cx.fill();
+
+    for(const p of pts){
+      // angular velocity increases toward center
+      const angVel=p.speed*(1+80/Math.max(p.r,30));
+      p.angle+=angVel;
+      // slowly spiral inward
+      p.r-=.18+p.drift*.05;
+      if(p.r<20){
+        p.r=80+Math.pow(Math.random(),.35)*Math.min(W,H)*.5;
+        p.angle=Math.random()*Math.PI*2;
+      }
+
+      const x=CX+Math.cos(p.angle)*p.r;
+      const y=CY+Math.sin(p.angle)*p.r*.55; // flatten slightly
+
+      // color: blue core → purple mid → gold outer
+      const rFrac=Math.min(p.r/(Math.min(W,H)*.45),1);
+      let r,g,b;
+      if(rFrac<.4){r=99+rFrac*100;g=102+rFrac*20;b=241-rFrac*80;}
+      else if(rFrac<.75){const f=(rFrac-.4)/.35;r=199+f*52;g=122+f*69;b=161-f*125;}
+      else{const f=(rFrac-.75)/.25;r=251;g=191-f*80;b=36-f*20;}
+
+      const alpha=(.3+rFrac*.5)*(.7+p.layer*.3);
+      cx.fillStyle=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${alpha.toFixed(3)})`;
+      cx.beginPath();cx.arc(x,y,p.size*(1.2-rFrac*.5),0,Math.PI*2);cx.fill();
+    }
+
+    // outer gold ring glow
+    const outer=cx.createRadialGradient(CX,CY,Math.min(W,H)*.35,CX,CY,Math.min(W,H)*.52);
+    outer.addColorStop(0,'rgba(245,158,11,0)');
+    outer.addColorStop(.5,'rgba(245,158,11,.06)');
+    outer.addColorStop(1,'rgba(245,158,11,0)');
+    cx.fillStyle=outer;cx.fillRect(0,0,W,H);
+
+    const vig=cx.createRadialGradient(CX,CY,H*.15,CX,CY,H*.85);
+    vig.addColorStop(0,'rgba(3,6,14,0)');vig.addColorStop(1,'rgba(3,6,14,.75)');
+    cx.fillStyle=vig;cx.fillRect(0,0,W,H);
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ══════════════════════════════════════════
+// 4 — PCB / CIRCUIT BOARD
+// Glowing circuit traces on dark board.
+// Pulses of light travel along paths.
+// Blue traces, gold solder points.
+// ══════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c4'),cx=cv.getContext('2d');
+  let W,H,t=0,traces=[],pulses=[];
+  let mx=.5,my=.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/W;my=e.clientY/H});
+
+  function mkGrid(W,H){
+    const CELL=64,traces=[];
+    const cols=Math.ceil(W/CELL)+2,rows=Math.ceil(H/CELL)+2;
+    // horizontal traces
+    for(let r=0;r<rows;r++){
+      let x=0;
+      while(x<W){
+        const len=(2+Math.floor(Math.random()*5))*CELL;
+        const y=r*CELL+Math.round((Math.random()-.5)*CELL*.3)*2;
+        if(Math.random()>.35)traces.push({x1:x,y1:y,x2:Math.min(x+len,W),y2:y,gold:Math.random()>.8,brightness:0});
+        x+=len+(Math.floor(Math.random()*3)+1)*CELL*.5;
+      }
+    }
+    // vertical traces
+    for(let c=0;c<cols;c++){
+      let y=0;
+      while(y<H){
+        const len=(2+Math.floor(Math.random()*4))*CELL;
+        const x=c*CELL+Math.round((Math.random()-.5)*CELL*.3)*2;
+        if(Math.random()>.4)traces.push({x1:x,y1:y,x2:x,y2:Math.min(y+len,H),gold:Math.random()>.8,brightness:0});
+        y+=len+(Math.floor(Math.random()*3)+1)*CELL*.5;
+      }
+    }
+    return traces;
+  }
+
+  function init(){
+    W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;
+    traces=mkGrid(W,H);pulses=[];
+  }
+
+  function spawnPulse(){
+    if(pulses.length>25)return;
+    const tr=traces[Math.floor(Math.random()*traces.length)];
+    pulses.push({tr,p:0,speed:.006+Math.random()*.012,gold:tr.gold});
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p4').classList.contains('on'))return;
+    t+=.008;
+
+    cx.fillStyle='#020812';cx.fillRect(0,0,W,H);
+    orbs(cx,W,H,(mx-.5)*8,(my-.5)*6);
+
+    // PCB board texture
+    cx.fillStyle='rgba(0,20,10,.08)';cx.fillRect(0,0,W,H);
+
+    // dim base traces
+    for(const tr of traces){
+      cx.strokeStyle=tr.gold?'rgba(180,140,20,.06)':'rgba(30,80,140,.1)';
+      cx.lineWidth=tr.gold?1.5:.8;
+      cx.beginPath();cx.moveTo(tr.x1,tr.y1);cx.lineTo(tr.x2,tr.y2);cx.stroke();
+      // solder pads at endpoints
+      if(Math.random()>.99){
+        const g=tr.gold?'rgba(200,160,30,.4)':'rgba(40,100,180,.35)';
+        cx.fillStyle=g;cx.beginPath();cx.arc(tr.x1,tr.y1,3,0,Math.PI*2);cx.fill();
+        cx.beginPath();cx.arc(tr.x2,tr.y2,3,0,Math.PI*2);cx.fill();
+      }
+    }
+
+    // solder pad dots
+    for(const tr of traces){
+      if(tr.gold){
+        cx.fillStyle='rgba(200,160,30,.22)';
+        cx.beginPath();cx.arc(tr.x1,tr.y1,3.5,0,Math.PI*2);cx.fill();
+        cx.beginPath();cx.arc(tr.x2,tr.y2,3.5,0,Math.PI*2);cx.fill();
+      }
+    }
+
+    // pulses
+    if(Math.random()<.12)spawnPulse();
+    for(const pu of pulses){
+      pu.p+=pu.speed;
+      const {tr}=pu;
+      const px=tr.x1+(tr.x2-tr.x1)*pu.p;
+      const py=tr.y1+(tr.y2-tr.y1)*pu.p;
+      // light up trace behind pulse
+      const alpha=.7*(1-pu.p*.5);
+      // glow on trace
+      cx.save();
+      const trLen=Math.hypot(tr.x2-tr.x1,tr.y2-tr.y1);
+      const pulseLen=Math.min(trLen*.3,120);
+      const px0=tr.x1+(tr.x2-tr.x1)*Math.max(0,pu.p-.12);
+      const py0=tr.y1+(tr.y2-tr.y1)*Math.max(0,pu.p-.12);
+      const trGrad=cx.createLinearGradient(px0,py0,px,py);
+      trGrad.addColorStop(0,'rgba(0,0,0,0)');
+      trGrad.addColorStop(1,pu.gold?`rgba(251,191,36,${alpha})`:`rgba(96,165,250,${alpha})`);
+      cx.strokeStyle=trGrad;cx.lineWidth=pu.gold?2.5:1.8;
+      cx.beginPath();cx.moveTo(px0,py0);cx.lineTo(px,py);cx.stroke();
+      cx.restore();
+      // head glow
+      const hg=cx.createRadialGradient(px,py,0,px,py,18);
+      hg.addColorStop(0,pu.gold?'rgba(251,191,36,.9)':'rgba(147,197,253,.9)');
+      hg.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=hg;cx.beginPath();cx.arc(px,py,18,0,Math.PI*2);cx.fill();
+      cx.fillStyle=pu.gold?'rgba(255,240,150,1)':'rgba(200,230,255,1)';
+      cx.beginPath();cx.arc(px,py,2,0,Math.PI*2);cx.fill();
+    }
+    pulses.splice(0,pulses.length,...pulses.filter(p=>p.p<1));
+
+    const vig=cx.createRadialGradient(W/2,H/2,H*.1,W/2,H/2,H*.85);
+    vig.addColorStop(0,'rgba(2,8,18,0)');vig.addColorStop(1,'rgba(2,8,18,.75)');
+    cx.fillStyle=vig;cx.fillRect(0,0,W,H);
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ══════════════════════════════════════════
+// 5 — MANDELBROT FRACTAL
+// Real-time Mandelbrot, slowly zooming in.
+// Colored in blue/purple/gold palette.
+// ══════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c5'),cx=cv.getContext('2d');
+  let W,H,t=0,off,octx;
+  // zoom into a beautiful spiral region
+  const TARGET_RE=-0.7269,TARGET_IM=0.1889;
+  let zoom=0.8,zoomSpeed=.0025;
+  let cx0=TARGET_RE,cy0=TARGET_IM;
+
+  function init(){
+    W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;
+    off=document.createElement('canvas');
+    // render at lower res for speed
+    off.width=Math.ceil(W/3);off.height=Math.ceil(H/3);
+    octx=off.getContext('2d');
+  }
+
+  const MAX_ITER=80;
+  function mandel(re,im){
+    let zr=0,zi=0,i=0;
+    while(i<MAX_ITER&&zr*zr+zi*zi<4){
+      const tmp=zr*zr-zi*zi+re;
+      zi=2*zr*zi+im;zr=tmp;i++;
+    }
+    return i;
+  }
+
+  // color palette: dark navy → purple → blue → gold → white
+  function iterToColor(i){
+    if(i===MAX_ITER)return[4,8,20];
+    const t=i/MAX_ITER;
+    const smooth=t;
+    if(smooth<.15){const f=smooth/.15;return[Math.round(4+f*30),Math.round(8+f*20),Math.round(20+f*100)];}
+    if(smooth<.35){const f=(smooth-.15)/.2;return[Math.round(34+f*65),Math.round(28+f*32),Math.round(120+f*126)];}
+    if(smooth<.55){const f=(smooth-.35)/.2;return[Math.round(99+f*50),Math.round(60+f*70),Math.round(246-f*80)];}
+    if(smooth<.75){const f=(smooth-.55)/.2;return[Math.round(149+f*96),Math.round(130+f*61),Math.round(166-f*130)];}
+    const f=(smooth-.75)/.25;return[Math.round(245+f*10),Math.round(191-f*80),Math.round(36-f*20)];
+  }
+
+  let lastRender=0;
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p5').classList.contains('on'))return;
+    t+=.01;
+
+    // render every 2 frames for performance
+    if(Date.now()-lastRender>40){
+      lastRender=Date.now();
+      zoom*=(1+zoomSpeed);
+      if(zoom>5000){zoom=0.8;}
+
+      const OW=off.width,OH=off.height;
+      const img=octx.createImageData(OW,OH);
+      const d=img.data;
+      const aspect=OW/OH;
+      const scale=3/(zoom);
+
+      for(let py=0;py<OH;py++){
+        for(let px=0;px<OW;px++){
+          const re=cx0+(px/OW-.5)*scale*aspect;
+          const im=cy0+(py/OH-.5)*scale;
+          const iter=mandel(re,im);
+          const [r,g,b]=iterToColor(iter);
+          const idx=(py*OW+px)*4;
+          d[idx]=r;d[idx+1]=g;d[idx+2]=b;d[idx+3]=255;
+        }
+      }
+      octx.putImageData(img,0,0);
+    }
+
+    cx.fillStyle='#04080f';cx.fillRect(0,0,W,H);
+    cx.filter='blur(1.5px)';
+    cx.drawImage(off,0,0,W,H);
+    cx.filter='none';
+
+    // overlay vignette to blend edges
+    const vig=cx.createRadialGradient(W/2,H/2,H*.05,W/2,H/2,H*.85);
+    vig.addColorStop(0,'rgba(4,8,15,0)');
+    vig.addColorStop(.6,'rgba(4,8,15,.3)');
+    vig.addColorStop(1,'rgba(4,8,15,.88)');
+    cx.fillStyle=vig;cx.fillRect(0,0,W,H);
+
+    // zoom indicator
+    cx.fillStyle='rgba(96,165,250,.2)';
+    cx.font='10px "JetBrains Mono",monospace';
+    cx.textAlign='left';
+    cx.fillText(`zoom ×${zoom.toFixed(0)}`,20,H-20);
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+</script>
+</body>
+</html>

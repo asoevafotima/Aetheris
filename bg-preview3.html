@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Aetheris BG — Match Your Style</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#04080f;color:#fff;overflow:hidden}
+.bar{
+  position:fixed;top:0;left:0;right:0;z-index:999;
+  background:rgba(4,8,15,0.92);backdrop-filter:blur(24px);
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  padding:10px 28px;display:flex;align-items:center;gap:8px
+}
+.bl{font-size:10px;font-weight:700;color:rgba(255,255,255,0.22);letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+.btn{
+  padding:7px 18px;border-radius:8px;
+  border:1px solid rgba(255,255,255,0.1);
+  background:transparent;color:rgba(255,255,255,0.38);
+  cursor:pointer;font-size:12px;font-family:'Inter',sans-serif;font-weight:600;
+  transition:all .18s;letter-spacing:.01em
+}
+.btn:hover{color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.25)}
+.btn.on{background:rgba(255,255,255,0.96);color:#04080f;border-color:transparent}
+.pg{display:none;position:fixed;inset:0}
+.pg.on{display:block}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+
+/* overlay UI — mimics the real site */
+.ui{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:2;pointer-events:none;text-align:center
+}
+.ui-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:100px;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+  font-size:12px;color:rgba(255,255,255,0.55);font-weight:600;
+  letter-spacing:.04em;margin-bottom:24px
+}
+.ui-title{font-size:72px;font-weight:900;letter-spacing:-.055em;line-height:.95;margin-bottom:16px}
+.ui-t1{color:rgba(255,255,255,0.92)}
+.ui-t2{background:linear-gradient(135deg,#a5b4fc,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ui-sub{font-size:15px;color:rgba(255,255,255,0.32);margin-bottom:28px}
+.ui-btns{display:flex;gap:10px;justify-content:center}
+.ui-b1{padding:13px 28px;border-radius:100px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 0 28px rgba(245,158,11,0.4)}
+.ui-b2{padding:13px 28px;border-radius:100px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.vname{
+  position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+  z-index:2;pointer-events:none;
+  font-size:11px;color:rgba(255,255,255,0.2);letter-spacing:.14em;text-transform:uppercase;font-family:'JetBrains Mono',monospace
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="bl">Aetheris — фон под стиль сайта</span>
+  <button class="btn on" onclick="show(1)">① Нейросеть</button>
+  <button class="btn"    onclick="show(2)">② Код-дождь</button>
+  <button class="btn"    onclick="show(3)">③ Созвездия алгоритмов</button>
+</div>
+
+<!-- shared UI overlay -->
+<template id="ui-tpl">
+  <div class="ui">
+    <div class="ui-tag">✦ Season 2026 · Competitive Platform</div>
+    <div class="ui-title">
+      <span class="ui-t1">Aetheris</span>
+    </div>
+    <div class="ui-sub">Next-generation competitive programming platform</div>
+    <div class="ui-btns">
+      <button class="ui-b1">Start for Free →</button>
+      <button class="ui-b2">Sign In</button>
+    </div>
+  </div>
+</template>
+
+<!-- ══════ 1: NEURAL NET ══════ -->
+<div id="p1" class="pg on">
+  <canvas id="c1"></canvas>
+  <div class="ui">
+    <div class="ui-tag">✦ Season 2026 · Competitive Platform</div>
+    <div class="ui-title"><span class="ui-t1">Aetheris</span></div>
+    <div class="ui-sub">Next-generation competitive programming platform</div>
+    <div class="ui-btns"><button class="ui-b1">Start for Free →</button><button class="ui-b2">Sign In</button></div>
+  </div>
+  <div class="vname">Вариант 1 — Нейронная сеть</div>
+</div>
+
+<!-- ══════ 2: CODE RAIN ══════ -->
+<div id="p2" class="pg">
+  <canvas id="c2"></canvas>
+  <div class="ui">
+    <div class="ui-tag">✦ Season 2026 · Competitive Platform</div>
+    <div class="ui-title"><span class="ui-t1">Aetheris</span></div>
+    <div class="ui-sub">Next-generation competitive programming platform</div>
+    <div class="ui-btns"><button class="ui-b1">Start for Free →</button><button class="ui-b2">Sign In</button></div>
+  </div>
+  <div class="vname">Вариант 2 — Алго-дождь</div>
+</div>
+
+<!-- ══════ 3: CONSTELLATION ══════ -->
+<div id="p3" class="pg">
+  <canvas id="c3"></canvas>
+  <div class="ui">
+    <div class="ui-tag">✦ Season 2026 · Competitive Platform</div>
+    <div class="ui-title"><span class="ui-t1">Aetheris</span></div>
+    <div class="ui-sub">Next-generation competitive programming platform</div>
+    <div class="ui-btns"><button class="ui-b1">Start for Free →</button><button class="ui-b2">Sign In</button></div>
+  </div>
+  <div class="vname">Вариант 3 — Созвездия алгоритмов</div>
+</div>
+
+<script>
+function show(n){
+  document.querySelectorAll('.pg').forEach((p,i)=>p.classList.toggle('on',i+1===n));
+  document.querySelectorAll('.btn').forEach((b,i)=>b.classList.toggle('on',i+1===n));
+}
+
+// ═══════════════════════════════════════════════════
+// 1 — NEURAL NETWORK
+// Layers of nodes with glowing signals flowing through
+// Same deep blue bg, blue/gold palette as the site
+// ═══════════════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c1'), cx=cv.getContext('2d');
+  let W,H,layers=[],signals=[],t=0;
+  let mx=0.5,my=0.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/window.innerWidth;my=e.clientY/window.innerHeight});
+
+  const LAYER_COUNTS=[5,8,10,8,6,4];
+  const LABELS=['Input','Linear','ReLU','Attention','Softmax','Output'];
+
+  function init(){
+    W=cv.width=window.innerWidth;
+    H=cv.height=window.innerHeight;
+    layers=[];
+    const lw=W/(LAYER_COUNTS.length+1);
+    LAYER_COUNTS.forEach((count,li)=>{
+      const nodes=[];
+      const lx=lw*(li+1);
+      for(let ni=0;ni<count;ni++){
+        const ny=H/2+(ni-(count-1)/2)*(Math.min(H*0.08,55));
+        nodes.push({x:lx,y:ny,brightness:0,gold:Math.random()>0.75});
+      }
+      layers.push({nodes,label:LABELS[li]});
+    });
+    signals=[];
+  }
+
+  function spawnSignal(){
+    if(signals.length>30)return;
+    const li=Math.floor(Math.random()*(layers.length-1));
+    const fi=Math.floor(Math.random()*layers[li].nodes.length);
+    const ti=Math.floor(Math.random()*layers[li+1].nodes.length);
+    signals.push({li,fi,ti,p:0,speed:0.008+Math.random()*0.012,gold:Math.random()>0.6,life:1});
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p1').classList.contains('on'))return;
+    t+=0.008;
+
+    cx.fillStyle='#04080f';
+    cx.fillRect(0,0,W,H);
+
+    // bg orbs — same as site
+    const pw=(mx-.5)*14,ph=(my-.5)*14;
+    const g1=cx.createRadialGradient(W*.15-pw*.4,H*.35-ph*.4,0,W*.15-pw*.4,H*.35-ph*.4,W*.45);
+    g1.addColorStop(0,'rgba(29,78,216,0.18)');g1.addColorStop(1,'rgba(29,78,216,0)');
+    cx.fillStyle=g1;cx.fillRect(0,0,W,H);
+    const g2=cx.createRadialGradient(W*.85-pw*.2,H*.6-ph*.2,0,W*.85-pw*.2,H*.6-ph*.2,W*.35);
+    g2.addColorStop(0,'rgba(245,158,11,0.09)');g2.addColorStop(1,'rgba(245,158,11,0)');
+    cx.fillStyle=g2;cx.fillRect(0,0,W,H);
+
+    // update signals
+    if(Math.random()<0.12)spawnSignal();
+    for(const s of signals){
+      s.p+=s.speed;
+      const fn=layers[s.li].nodes[s.fi];
+      const tn=layers[s.li+1].nodes[s.ti];
+      if(fn&&tn){
+        const sx=fn.x+(tn.x-fn.x)*s.p;
+        const sy=fn.y+(tn.y-fn.y)*s.p;
+        // light up destination node
+        if(s.p>0.9)tn.brightness=Math.min(1,tn.brightness+0.15);
+      }
+    }
+    signals.splice(0,signals.length,...signals.filter(s=>s.p<1));
+    // decay node brightness
+    for(const l of layers)for(const n of l.nodes)n.brightness*=0.96;
+
+    // draw connections
+    for(let li=0;li<layers.length-1;li++){
+      const la=layers[li],lb=layers[li+1];
+      for(const a of la.nodes){
+        for(const b of lb.nodes){
+          const alpha=0.03+a.brightness*0.08+b.brightness*0.08;
+          cx.strokeStyle=`rgba(96,165,250,${alpha.toFixed(3)})`;
+          cx.lineWidth=0.5;
+          cx.beginPath();cx.moveTo(a.x+pw,a.y+ph);cx.lineTo(b.x+pw,b.y+ph);cx.stroke();
+        }
+      }
+    }
+
+    // draw signals on connections
+    for(const s of signals){
+      const fn=layers[s.li].nodes[s.fi];
+      const tn=layers[s.li+1].nodes[s.ti];
+      if(!fn||!tn)continue;
+      const sx=fn.x+(tn.x-fn.x)*s.p+pw;
+      const sy=fn.y+(tn.y-fn.y)*s.p+ph;
+      const halo=cx.createRadialGradient(sx,sy,0,sx,sy,12);
+      if(s.gold){
+        halo.addColorStop(0,'rgba(251,191,36,0.85)');
+        halo.addColorStop(.5,'rgba(245,158,11,0.18)');
+      } else {
+        halo.addColorStop(0,'rgba(147,197,253,0.9)');
+        halo.addColorStop(.5,'rgba(96,165,250,0.18)');
+      }
+      halo.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=halo;cx.beginPath();cx.arc(sx,sy,12,0,Math.PI*2);cx.fill();
+      cx.fillStyle=s.gold?'rgba(251,191,36,0.95)':'rgba(200,225,255,0.95)';
+      cx.beginPath();cx.arc(sx,sy,2.2,0,Math.PI*2);cx.fill();
+    }
+
+    // draw nodes
+    cx.font='10px "JetBrains Mono",monospace';cx.textAlign='center';
+    for(let li=0;li<layers.length;li++){
+      const layer=layers[li];
+      for(const n of layer.nodes){
+        const nx=n.x+pw,ny=n.y+ph;
+        const bright=n.brightness;
+        const r=3+bright*4;
+        // glow
+        const ng=cx.createRadialGradient(nx,ny,0,nx,ny,r*5);
+        const col=n.gold?'rgba(251,191,36,':'rgba(96,165,250,';
+        ng.addColorStop(0,col+(0.15+bright*0.5)+')');
+        ng.addColorStop(1,col+'0)');
+        cx.fillStyle=ng;cx.beginPath();cx.arc(nx,ny,r*5,0,Math.PI*2);cx.fill();
+        // dot
+        cx.fillStyle=n.gold?`rgba(251,191,36,${0.6+bright*0.4})`:`rgba(147,197,253,${0.55+bright*0.45})`;
+        cx.beginPath();cx.arc(nx,ny,r,0,Math.PI*2);cx.fill();
+      }
+      // layer label
+      if(layer.nodes.length>0){
+        const lx=layer.nodes[0].x+pw;
+        const ly=layer.nodes[layer.nodes.length-1].y+ph+28;
+        cx.fillStyle='rgba(147,197,253,0.2)';
+        cx.fillText(layer.label,lx,ly);
+      }
+    }
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ═══════════════════════════════════════════════════
+// 2 — ALGO RAIN
+// Falling columns of real algorithm/code fragments
+// Exact same palette: deep blue bg, blue + gold text
+// ═══════════════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c2'),cx=cv.getContext('2d');
+  let W,H,cols=[];
+
+  // Real algo/code fragments — fits competitive programming
+  const WORDS=[
+    'BFS','DFS','DP','Greedy','Graph','Math','Hash','Sort','Heap',
+    'Binary','Floyd','Dijkstra','Kruskal','Trie','Segment','Fenwick',
+    'O(1)','O(log n)','O(n)','O(n²)','O(2ⁿ)','O(n log n)',
+    'dp[i]','vis[v]','dist[]','parent[]',
+    'push(v)','pop()','top()','find(x)',
+    'ans++','sum+=a[i]','l=mid+1','r=mid-1',
+    'AC','WA','TLE','MLE','RE',
+  ];
+
+  const FONT_H=16;
+
+  function init(){
+    W=cv.width=window.innerWidth;
+    H=cv.height=window.innerHeight;
+    const numCols=Math.floor(W/28);
+    cols=Array.from({length:numCols},(_,i)=>({
+      x:i*28+14,
+      y:-(Math.random()*H),
+      speed:0.35+Math.random()*0.6,
+      words:Array.from({length:Math.ceil(H/FONT_H)+4},()=>WORDS[Math.floor(Math.random()*WORDS.length)]),
+      gold:Math.random()>0.82,
+      trailLen:8+Math.floor(Math.random()*10),
+    }));
+    cx.fillStyle='#04080f';
+    cx.fillRect(0,0,W,H);
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p2').classList.contains('on'))return;
+
+    // soft fade — creates trailing effect
+    cx.fillStyle='rgba(4,8,15,0.14)';
+    cx.fillRect(0,0,W,H);
+
+    // bg glow orbs (static, site-matching)
+    const g1=cx.createRadialGradient(W*.12,H*.38,0,W*.12,H*.38,W*.42);
+    g1.addColorStop(0,'rgba(29,78,216,0.07)');g1.addColorStop(1,'rgba(29,78,216,0)');
+    cx.fillStyle=g1;cx.fillRect(0,0,W,H);
+    const g2=cx.createRadialGradient(W*.88,H*.55,0,W*.88,H*.55,W*.35);
+    g2.addColorStop(0,'rgba(245,158,11,0.05)');g2.addColorStop(1,'rgba(245,158,11,0)');
+    cx.fillStyle=g2;cx.fillRect(0,0,W,H);
+
+    for(const col of cols){
+      const headY=col.y;
+      const wordCount=Math.ceil((H-headY)/FONT_H)+2;
+
+      for(let i=0;i<Math.min(wordCount,col.words.length);i++){
+        const wy=headY+i*FONT_H;
+        if(wy<-FONT_H||wy>H+FONT_H)continue;
+        const distFromHead=Math.floor((H-wy)/FONT_H);
+        const isHead=i===wordCount-1||wy>H-FONT_H*2;
+
+        let alpha,color;
+        if(isHead){
+          alpha=0.92;
+          color=col.gold?'#fde68a':'#e0f2fe';
+          // head glow
+          const hg=cx.createRadialGradient(col.x,wy,0,col.x,wy,20);
+          hg.addColorStop(0,col.gold?'rgba(253,230,138,0.25)':'rgba(147,197,253,0.2)');
+          hg.addColorStop(1,'rgba(0,0,0,0)');
+          cx.fillStyle=hg;cx.fillRect(col.x-20,wy-20,40,40);
+        } else {
+          const fade=Math.max(0,1-(distFromHead/col.trailLen));
+          alpha=fade*0.35;
+          color=col.gold?`rgba(245,158,11,${alpha})`:`rgba(96,165,250,${alpha})`;
+        }
+
+        if(alpha<0.015)continue;
+        cx.font=`600 ${FONT_H-3}px "JetBrains Mono",monospace`;
+        cx.textAlign='center';
+        cx.fillStyle=isHead?color:`rgba(${col.gold?'245,158,11':'96,165,250'},${alpha})`;
+        cx.fillText(col.words[i%col.words.length],col.x,wy);
+
+        // occasionally swap word
+        if(Math.random()<0.004)col.words[i%col.words.length]=WORDS[Math.floor(Math.random()*WORDS.length)];
+      }
+
+      col.y+=col.speed;
+      if(col.y>H+FONT_H*3){
+        col.y=-FONT_H*(col.trailLen+Math.random()*20);
+        col.speed=0.35+Math.random()*0.6;
+        col.gold=Math.random()>0.82;
+      }
+    }
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ═══════════════════════════════════════════════════
+// 3 — ALGORITHM CONSTELLATIONS
+// Groups of stars form "constellations" named after
+// algorithm families. They slowly drift and rotate.
+// Same palette as site.
+// ═══════════════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c3'),cx=cv.getContext('2d');
+  let W,H,consts=[],bgStars=[],t=0;
+  let mx=0.5,my=0.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/window.innerWidth;my=e.clientY/window.innerHeight});
+
+  const GROUPS=[
+    {name:'Graph Theory',  color:'rgba(96,165,250,',  gold:false, nodeCount:6},
+    {name:'Dynamic Prog',  color:'rgba(251,191,36,',  gold:true,  nodeCount:5},
+    {name:'Sorting',       color:'rgba(167,139,250,', gold:false, nodeCount:4},
+    {name:'Trees & Heaps', color:'rgba(52,211,153,',  gold:false, nodeCount:7},
+    {name:'Number Theory', color:'rgba(251,191,36,',  gold:true,  nodeCount:5},
+    {name:'Strings',       color:'rgba(96,165,250,',  gold:false, nodeCount:6},
+    {name:'Geometry',      color:'rgba(167,139,250,', gold:false, nodeCount:5},
+    {name:'Flow / Match',  color:'rgba(251,191,36,',  gold:true,  nodeCount:4},
+  ];
+
+  function mkConst(group,W,H){
+    const cx0=Math.random()*W;
+    const cy0=Math.random()*H;
+    const spread=60+Math.random()*80;
+    const nodes=Array.from({length:group.nodeCount},()=>({
+      ox:cx0+(Math.random()-.5)*spread,
+      oy:cy0+(Math.random()-.5)*spread,
+      x:0,y:0,
+      r:1.5+Math.random()*2.2,
+      pulse:0,pdir:1,pspeed:0.008+Math.random()*0.012,
+    }));
+    // pick edges
+    const edges=[];
+    for(let i=0;i<nodes.length-1;i++){
+      edges.push([i,i+1]);
+      if(Math.random()>0.5&&i+2<nodes.length)edges.push([i,i+2]);
+    }
+    return{
+      nodes,edges,name:group.name,color:group.color,
+      vx:(Math.random()-.5)*0.12,vy:(Math.random()-.5)*0.08,
+      rot:Math.random()*Math.PI*2,rotSpeed:(Math.random()-.5)*0.001,
+      cx:cx0,cy:cy0,spread,alpha:0,targetAlpha:0.7+Math.random()*0.3,
+    };
+  }
+
+  function init(){
+    W=cv.width=window.innerWidth;
+    H=cv.height=window.innerHeight;
+    // background micro-stars
+    bgStars=Array.from({length:200},()=>({
+      x:Math.random()*W,y:Math.random()*H,
+      r:0.3+Math.random()*.9,a:0.05+Math.random()*0.3,
+      ta:0.05+Math.random()*0.3,da:0.002+Math.random()*0.006,
+    }));
+    consts=GROUPS.map(g=>mkConst(g,W,H));
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p3').classList.contains('on'))return;
+    t+=0.006;
+
+    cx.fillStyle='#04080f';
+    cx.fillRect(0,0,W,H);
+
+    const pw=(mx-.5)*18,ph=(my-.5)*14;
+
+    // orbs matching site
+    const g1=cx.createRadialGradient(W*.12-pw*.4,H*.38-ph*.4,0,W*.12-pw*.4,H*.38-ph*.4,W*.42);
+    g1.addColorStop(0,'rgba(29,78,216,0.17)');g1.addColorStop(1,'rgba(29,78,216,0)');
+    cx.fillStyle=g1;cx.fillRect(0,0,W,H);
+    const g2=cx.createRadialGradient(W*.88-pw*.2,H*.55-ph*.2,0,W*.88-pw*.2,H*.55-ph*.2,W*.35);
+    g2.addColorStop(0,'rgba(245,158,11,0.09)');g2.addColorStop(1,'rgba(245,158,11,0)');
+    cx.fillStyle=g2;cx.fillRect(0,0,W,H);
+
+    // bg stars
+    for(const s of bgStars){
+      s.a+=(s.ta-s.a)*s.da;
+      if(Math.abs(s.a-s.ta)<0.01)s.ta=0.05+Math.random()*0.3;
+      cx.fillStyle=`rgba(200,220,255,${s.a.toFixed(3)})`;
+      cx.beginPath();cx.arc(s.x+pw*.2,s.y+ph*.2,s.r,0,Math.PI*2);cx.fill();
+    }
+
+    // draw constellations
+    for(const c of consts){
+      c.alpha+=(c.targetAlpha-c.alpha)*0.015;
+      c.cx+=c.vx; c.cy+=c.vy; c.rot+=c.rotSpeed;
+      // wrap
+      if(c.cx<-150)c.cx=W+100; if(c.cx>W+150)c.cx=-100;
+      if(c.cy<-150)c.cy=H+100; if(c.cy>H+150)c.cy=-100;
+
+      // update node positions with parallax
+      for(const n of c.nodes){
+        const cos=Math.cos(c.rot),sin=Math.sin(c.rot);
+        const dx=n.ox-c.cx,dy=n.oy-c.cy;
+        n.x = c.cx + dx*cos - dy*sin + pw;
+        n.y = c.cy + dx*sin + dy*cos + ph;
+        // pulse brightness
+        n.pulse+=n.pspeed*n.pdir;
+        if(n.pulse>1){n.pulse=1;n.pdir=-1;}
+        if(n.pulse<0){n.pulse=0;n.pdir=1;}
+      }
+
+      const baseAlpha=c.alpha;
+
+      // edges
+      for(const[a,b] of c.edges){
+        const na=c.nodes[a],nb=c.nodes[b];
+        const edgeA=baseAlpha*0.25;
+        // gradient edge
+        const eg=cx.createLinearGradient(na.x,na.y,nb.x,nb.y);
+        eg.addColorStop(0,c.color+(edgeA*(0.5+na.pulse*.5)).toFixed(3)+')');
+        eg.addColorStop(1,c.color+(edgeA*(0.5+nb.pulse*.5)).toFixed(3)+')');
+        cx.strokeStyle=eg; cx.lineWidth=0.8;
+        cx.beginPath();cx.moveTo(na.x,na.y);cx.lineTo(nb.x,nb.y);cx.stroke();
+      }
+
+      // nodes
+      for(const n of c.nodes){
+        const r=n.r*(1+n.pulse*0.6);
+        const a=baseAlpha*(0.5+n.pulse*0.5);
+        // halo
+        const halo=cx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*5);
+        halo.addColorStop(0,c.color+(a*0.25).toFixed(3)+')');
+        halo.addColorStop(1,c.color+'0)');
+        cx.fillStyle=halo;cx.beginPath();cx.arc(n.x,n.y,r*5,0,Math.PI*2);cx.fill();
+        // dot
+        cx.fillStyle=c.color+a.toFixed(3)+')';
+        cx.beginPath();cx.arc(n.x,n.y,r,0,Math.PI*2);cx.fill();
+      }
+
+      // label near center
+      const label_a=baseAlpha*0.28;
+      if(label_a>0.04){
+        cx.font='600 10px "JetBrains Mono",monospace';
+        cx.textAlign='center';
+        cx.fillStyle=c.color+label_a.toFixed(3)+')';
+        cx.fillText(c.name, c.cx+pw, c.cy+ph - c.spread*0.55);
+      }
+    }
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+</script>
+</body>
+</html>

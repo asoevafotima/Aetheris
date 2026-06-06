@@ -58,6 +58,7 @@ from duel_ratings.router import router as duel_ratings_router
 from teams.router import router as teams_router
 from team_members.router import router as team_members_router
 from team_contests.router import router as team_contests_router
+from team_invitations.router import router as team_invitations_router
 from achievements.router import router as achievements_router
 from user_achievements.router import router as user_achievements_router
 from ratings.router import router as ratings_router
@@ -115,6 +116,7 @@ app.include_router(duel_ratings_router)
 app.include_router(teams_router)
 app.include_router(team_members_router)
 app.include_router(team_contests_router)
+app.include_router(team_invitations_router)
 app.include_router(achievements_router)
 app.include_router(user_achievements_router)
 app.include_router(ratings_router)

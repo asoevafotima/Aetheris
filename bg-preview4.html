@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Aetheris BG — Premium 5</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#04080f;color:#fff;overflow:hidden}
+.bar{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(4,8,15,0.95);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,0.07);padding:9px 24px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bl{font-size:10px;font-weight:700;color:rgba(255,255,255,0.2);letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+.btn{padding:6px 15px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.36);cursor:pointer;font-size:11px;font-family:'Inter',sans-serif;font-weight:600;transition:all .15s}
+.btn:hover{color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.25)}
+.btn.on{background:rgba(255,255,255,0.95);color:#04080f;border-color:transparent}
+.pg{display:none;position:fixed;inset:0}
+.pg.on{display:block}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+/* site UI overlay */
+.ov{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);z-index:2;pointer-events:none;text-align:center;user-select:none}
+.ov-tag{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:100px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);font-size:11px;color:rgba(255,255,255,0.45);font-weight:600;margin-bottom:20px}
+.ov-dot{width:5px;height:5px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+.ov-h{font-size:80px;font-weight:900;letter-spacing:-.06em;line-height:.92;margin-bottom:14px}
+.g1{background:linear-gradient(135deg,#fff 30%,#93c5fd 60%,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g2{background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ov-sub{font-size:14px;color:rgba(255,255,255,0.3);margin-bottom:26px;letter-spacing:.01em}
+.ov-btns{display:flex;gap:10px;justify-content:center}
+.ob1{padding:12px 28px;border-radius:100px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;box-shadow:0 0 30px rgba(245,158,11,.45);font-family:'Inter',sans-serif}
+.ob2{padding:12px 28px;border-radius:100px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,.65);font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.vn{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:2;pointer-events:none;font-size:10px;color:rgba(255,255,255,0.18);letter-spacing:.15em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="bar">
+  <span class="bl">5 новых вариантов</span>
+  <button class="btn on" onclick="show(1)">① ДНК Спираль</button>
+  <button class="btn"    onclick="show(2)">② Интерференция</button>
+  <button class="btn"    onclick="show(3)">③ Галактика</button>
+  <button class="btn"    onclick="show(4)">④ Морфинг сфера</button>
+  <button class="btn"    onclick="show(5)">⑤ Жидкий металл</button>
+</div>
+
+<!-- reusable overlay macro -->
+<script>
+function mkOv(){return`<div class="ov"><div class="ov-tag"><div class="ov-dot"></div>Season 2026 · Competitive Platform</div><div class="ov-h"><span class="g1">Aether</span><span class="g2">is</span></div><div class="ov-sub">Next-generation competitive programming platform</div><div class="ov-btns"><button class="ob1">Start for Free →</button><button class="ob2">Sign In</button></div></div>`;}
+</script>
+
+<div id="p1" class="pg on"></div>
+<div id="p2" class="pg"></div>
+<div id="p3" class="pg"></div>
+<div id="p4" class="pg"></div>
+<div id="p5" class="pg"></div>
+
+<script>
+// inject overlays + canvas + vname
+const VN=['ДНК-спираль кода','Волновая интерференция','Галактика алгоритмов','Морфинг-сфера','Жидкий металл'];
+for(let i=1;i<=5;i++){
+  const pg=document.getElementById('p'+i);
+  pg.innerHTML=`<canvas id="c${i}"></canvas>${mkOv()}<div class="vn">Вариант ${i} — ${VN[i-1]}</div>`;
+}
+
+function show(n){
+  document.querySelectorAll('.pg').forEach((p,i)=>p.classList.toggle('on',i+1===n));
+  document.querySelectorAll('.btn').forEach((b,i)=>b.classList.toggle('on',i+1===n));
+}
+
+// ══════════════════════════════════════════════════════
+// UTIL: bg orbs (same as site)
+// ══════════════════════════════════════════════════════
+function drawOrbs(cx,W,H,pw,ph){
+  const g1=cx.createRadialGradient(W*.12-pw*.4,H*.38-ph*.4,0,W*.12-pw*.4,H*.38-ph*.4,W*.44);
+  g1.addColorStop(0,'rgba(29,78,216,0.18)');g1.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=g1;cx.fillRect(0,0,W,H);
+  const g2=cx.createRadialGradient(W*.86-pw*.2,H*.56-ph*.2,0,W*.86-pw*.2,H*.56-ph*.2,W*.34);
+  g2.addColorStop(0,'rgba(245,158,11,0.10)');g2.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=g2;cx.fillRect(0,0,W,H);
+}
+
+
+// ══════════════════════════════════════════════════════
+// 1 — DNA / CODE HELIX
+// Double helix rotating in 3D perspective,
+// rungs labelled with algo ops, same blue+gold palette
+// ══════════════════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c1'),cx=cv.getContext('2d');
+  let W,H,t=0;
+  let mx=.5,my=.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/W;my=e.clientY/H});
+
+  const LABELS=['BFS','DP','O(1)','sort','hash','dfs','O(n)','push','pop','find','O(log n)','AC','WA','vis','dist','flow'];
+
+  function init(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p1').classList.contains('on'))return;
+    t+=0.012;
+    cx.fillStyle='#04080f';cx.fillRect(0,0,W,H);
+    drawOrbs(cx,W,H,(mx-.5)*12,(my-.5)*10);
+
+    const helixCount=3; // 3 interleaved helices
+    const CX=W/2,CY=H/2;
+    const HEIGHT=H*0.75;
+    const RADIUS=W*0.055;
+    const TURNS=5;
+    const STEPS=200;
+    const PERSPECTIVE=800;
+
+    for(let h=0;h<helixCount;h++){
+      const phaseOffset=(h/helixCount)*Math.PI*2;
+      const pts1=[],pts2=[];
+
+      for(let i=0;i<=STEPS;i++){
+        const frac=i/STEPS;
+        const y=CY-HEIGHT/2+frac*HEIGHT;
+        const angle=frac*Math.PI*2*TURNS+t+phaseOffset;
+        const tilt=(mx-.5)*0.6; // mouse tilt
+
+        const x1=CX+Math.cos(angle)*RADIUS;
+        const z1=Math.sin(angle)*RADIUS;
+        const x2=CX+Math.cos(angle+Math.PI)*RADIUS;
+        const z2=Math.sin(angle+Math.PI)*RADIUS;
+
+        // 3D -> 2D perspective
+        const scale1=PERSPECTIVE/(PERSPECTIVE+z1);
+        const scale2=PERSPECTIVE/(PERSPECTIVE+z2);
+        pts1.push({sx:CX+(x1-CX)*scale1,sy:y,z:z1,scale:scale1});
+        pts2.push({sx:CX+(x2-CX)*scale2,sy:y,z:z2,scale:scale2});
+      }
+
+      // draw strand 1
+      const isGold=h===1;
+      const col=isGold?'rgba(251,191,36,':'rgba(96,165,250,';
+      cx.beginPath();
+      pts1.forEach((p,i)=>{
+        const alpha=(0.25+p.z/RADIUS*0.25)*0.7;
+        if(i===0)cx.moveTo(p.sx,p.sy);
+        else cx.lineTo(p.sx,p.sy);
+      });
+      cx.strokeStyle=col+'0.55)';cx.lineWidth=1.2;cx.stroke();
+
+      // draw strand 2
+      cx.beginPath();
+      pts2.forEach((p,i)=>{
+        if(i===0)cx.moveTo(p.sx,p.sy);
+        else cx.lineTo(p.sx,p.sy);
+      });
+      cx.strokeStyle=col+'0.35)';cx.lineWidth=0.8;cx.stroke();
+
+      // rungs + labels every ~12 steps
+      for(let i=0;i<STEPS;i+=12){
+        const p1=pts1[i],p2=pts2[i];
+        if(!p1||!p2)continue;
+        const midZ=(p1.z+p2.z)/2;
+        const alpha=0.2+midZ/RADIUS*0.3;
+        if(alpha<0.05)continue;
+        // rung line
+        cx.strokeStyle=col+(Math.max(0,alpha)*0.5).toFixed(3)+')';
+        cx.lineWidth=0.7;
+        cx.beginPath();cx.moveTo(p1.sx,p1.sy);cx.lineTo(p2.sx,p2.sy);cx.stroke();
+        // dot on each end
+        const r=2*p1.scale;
+        cx.fillStyle=col+Math.max(0,alpha).toFixed(3)+')';
+        cx.beginPath();cx.arc(p1.sx,p1.sy,r,0,Math.PI*2);cx.fill();
+        cx.beginPath();cx.arc(p2.sx,p2.sy,r*0.8,0,Math.PI*2);cx.fill();
+        // label
+        if(h===0&&midZ>RADIUS*0.3){
+          const li=Math.floor(i/12)%LABELS.length;
+          cx.font=`500 9px "JetBrains Mono",monospace`;
+          cx.textAlign='center';
+          cx.fillStyle=isGold?`rgba(251,191,36,${(alpha*.6).toFixed(2)})`:`rgba(147,197,253,${(alpha*.6).toFixed(2)})`;
+          cx.fillText(LABELS[li],(p1.sx+p2.sx)/2,(p1.sy+p2.sy)/2-8);
+        }
+      }
+    }
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ══════════════════════════════════════════════════════
+// 2 — WAVE INTERFERENCE
+// Multiple wave sources create interference patterns.
+// Colors blend blue+purple+gold — visually stunning.
+// ══════════════════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c2'),cx=cv.getContext('2d');
+  let W,H,t=0,offscreen,octx;
+  let mx=.5,my=.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/W;my=e.clientY/H});
+
+  const SOURCES=[
+    {fx:.15,fy:.3, freq:0.018, phase:0,     amp:1.0},
+    {fx:.85,fy:.25,freq:0.015, phase:2.1,   amp:0.9},
+    {fx:.5, fy:.8, freq:0.020, phase:4.2,   amp:0.85},
+    {fx:.25,fy:.75,freq:0.014, phase:1.1,   amp:0.7},
+    {fx:.78,fy:.65,freq:0.017, phase:3.3,   amp:0.75},
+  ];
+
+  let res=4; // pixel resolution (lower = faster)
+
+  function init(){
+    W=cv.width=window.innerWidth;
+    H=cv.height=window.innerHeight;
+    offscreen=document.createElement('canvas');
+    offscreen.width=Math.ceil(W/res);
+    offscreen.height=Math.ceil(H/res);
+    octx=offscreen.getContext('2d');
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p2').classList.contains('on'))return;
+    t+=0.025;
+
+    const OW=offscreen.width,OH=offscreen.height;
+    const img=octx.createImageData(OW,OH);
+    const d=img.data;
+
+    // add mouse as 6th source
+    const allSrc=[...SOURCES,{fx:mx,fy:my,freq:0.022,phase:t*0.3,amp:0.6}];
+
+    for(let py=0;py<OH;py++){
+      for(let px=0;px<OW;px++){
+        const wx=px/OW*W, wy=py/OH*H;
+        let val=0;
+        for(const s of allSrc){
+          const dx=wx-s.fx*W, dy=wy-s.fy*H;
+          const dist=Math.sqrt(dx*dx+dy*dy);
+          val+=s.amp*Math.sin(dist*s.freq-t+s.phase);
+        }
+        val/=allSrc.length;
+        // map -1..1 to colors
+        const n=(val+1)/2; // 0..1
+        const idx=(py*OW+px)*4;
+
+        // beautiful color mapping: dark blue → purple → gold
+        let r,g,b;
+        if(n<0.3){
+          const f=n/0.3;
+          r=4+f*30; g=8+f*10; b=15+f*60;
+        } else if(n<0.5){
+          const f=(n-.3)/.2;
+          r=34+f*60; g=18+f*5; b=75+f*80;
+        } else if(n<0.7){
+          const f=(n-.5)/.2;
+          r=94+f*90; g=23+f*70; b=155-f*50;
+        } else {
+          const f=(n-.7)/.3;
+          r=184+f*60; g=93+f*100; b=105-f*80;
+        }
+        d[idx]=r; d[idx+1]=g; d[idx+2]=b; d[idx+3]=255;
+      }
+    }
+    octx.putImageData(img,0,0);
+
+    cx.fillStyle='#04080f';cx.fillRect(0,0,W,H);
+    // draw scaled up with blur for smooth look
+    cx.globalAlpha=0.72;
+    cx.filter='blur(1px)';
+    cx.drawImage(offscreen,0,0,W,H);
+    cx.filter='none';
+    cx.globalAlpha=1;
+
+    // overlay vignette
+    const vig=cx.createRadialGradient(W/2,H/2,H*.05,W/2,H/2,H*.9);
+    vig.addColorStop(0,'rgba(4,8,15,0.0)');
+    vig.addColorStop(.6,'rgba(4,8,15,0.3)');
+    vig.addColorStop(1,'rgba(4,8,15,0.85)');
+    cx.fillStyle=vig;cx.fillRect(0,0,W,H);
+
+    // source dots
+    for(const s of SOURCES){
+      const sx=s.fx*W,sy=s.fy*H;
+      const g=cx.createRadialGradient(sx,sy,0,sx,sy,30);
+      g.addColorStop(0,'rgba(251,191,36,0.6)');g.addColorStop(1,'rgba(251,191,36,0)');
+      cx.fillStyle=g;cx.beginPath();cx.arc(sx,sy,30,0,Math.PI*2);cx.fill();
+      cx.fillStyle='rgba(253,230,138,0.9)';
+      cx.beginPath();cx.arc(sx,sy,3,0,Math.PI*2);cx.fill();
+    }
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ══════════════════════════════════════════════════════
+// 3 — GALAXY / SPIRAL
+// Thousands of particles forming a spiral galaxy.
+// Stars labelled with algo terms at certain distances.
+// Deep blue core → gold outer arms.
+// ══════════════════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c3'),cx=cv.getContext('2d');
+  let W,H,stars=[],t=0;
+  let mx=.5,my=.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/W;my=e.clientY/H});
+  const N=1800;
+  const LABELS2=['Graph','DP','Sort','Hash','BFS','DFS','O(n)','Greedy','Trees','Heap','Trie','Flow'];
+
+  function init(){
+    W=cv.width=window.innerWidth;
+    H=cv.height=window.innerHeight;
+    stars=[];
+    for(let i=0;i<N;i++){
+      const arm=Math.floor(Math.random()*3);
+      const armAngle=(arm/3)*Math.PI*2;
+      const r=50+Math.pow(Math.random(),0.55)*(Math.min(W,H)*0.42);
+      const spread=r*0.18+8;
+      const angle=armAngle+r*0.0095+Math.random()*0.35-0.175;
+      stars.push({
+        r, angle,
+        ox:(Math.random()-.5)*spread,
+        oy:(Math.random()-.5)*spread,
+        rotSpeed:0.00008+Math.random()*0.00006,
+        size:0.5+Math.random()*1.8,
+        alpha:0.2+Math.random()*0.7,
+        gold:r>Math.min(W,H)*0.22&&Math.random()>0.65,
+        label:Math.random()>0.985?LABELS2[Math.floor(Math.random()*LABELS2.length)]:null,
+      });
+    }
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p3').classList.contains('on'))return;
+    t+=0.004;
+    cx.fillStyle='#03060d';cx.fillRect(0,0,W,H);
+
+    const pw=(mx-.5)*20,ph=(my-.5)*16;
+    const CX=W/2+pw,CY=H/2+ph;
+
+    // galaxy core glow
+    const core=cx.createRadialGradient(CX,CY,0,CX,CY,120);
+    core.addColorStop(0,'rgba(165,180,252,0.45)');
+    core.addColorStop(.3,'rgba(99,102,241,0.15)');
+    core.addColorStop(1,'rgba(99,102,241,0)');
+    cx.fillStyle=core;cx.beginPath();cx.arc(CX,CY,120,0,Math.PI*2);cx.fill();
+
+    const midGlow=cx.createRadialGradient(CX,CY,0,CX,CY,W*.3);
+    midGlow.addColorStop(0,'rgba(29,78,216,0.12)');
+    midGlow.addColorStop(1,'rgba(29,78,216,0)');
+    cx.fillStyle=midGlow;cx.fillRect(0,0,W,H);
+
+    // outer gold haze
+    const outerG=cx.createRadialGradient(W*.82,H*.62,0,W*.82,H*.62,W*.28);
+    outerG.addColorStop(0,'rgba(245,158,11,0.08)');outerG.addColorStop(1,'rgba(245,158,11,0)');
+    cx.fillStyle=outerG;cx.fillRect(0,0,W,H);
+
+    // sort stars by distance for depth
+    const toRender=stars.map(s=>{
+      s.angle+=s.rotSpeed;
+      const x=CX+Math.cos(s.angle)*s.r+s.ox;
+      const y=CY+Math.sin(s.angle)*s.r*0.42+s.oy; // flatten y for galaxy perspective
+      return{...s,x,y};
+    }).sort((a,b)=>b.r-a.r);
+
+    cx.font='9px "JetBrains Mono",monospace';cx.textAlign='center';
+    for(const s of toRender){
+      const depthAlpha=s.alpha*(0.4+0.6*(1-s.r/(Math.min(W,H)*.5)));
+      if(s.gold){
+        // outer gold stars
+        cx.fillStyle=`rgba(251,191,36,${depthAlpha.toFixed(3)})`;
+        if(s.size>1.2){
+          const halo=cx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.size*5);
+          halo.addColorStop(0,`rgba(245,158,11,${(depthAlpha*.3).toFixed(3)})`);
+          halo.addColorStop(1,'rgba(245,158,11,0)');
+          cx.fillStyle=halo;cx.beginPath();cx.arc(s.x,s.y,s.size*5,0,Math.PI*2);cx.fill();
+          cx.fillStyle=`rgba(253,230,138,${depthAlpha.toFixed(3)})`;
+        }
+      } else {
+        cx.fillStyle=`rgba(147,197,253,${depthAlpha.toFixed(3)})`;
+      }
+      cx.beginPath();cx.arc(s.x,s.y,s.size,0,Math.PI*2);cx.fill();
+      if(s.label){
+        cx.fillStyle=s.gold?`rgba(251,191,36,${(depthAlpha*.7).toFixed(3)})`:`rgba(147,197,253,${(depthAlpha*.7).toFixed(3)})`;
+        cx.fillText(s.label,s.x,s.y-s.size-5);
+      }
+    }
+
+    // vignette
+    const vig=cx.createRadialGradient(CX,CY,H*.05,CX,CY,H*.78);
+    vig.addColorStop(0,'rgba(3,6,13,0)');vig.addColorStop(1,'rgba(3,6,13,0.75)');
+    cx.fillStyle=vig;cx.fillRect(0,0,W,H);
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ══════════════════════════════════════════════════════
+// 4 — MORPHING SPHERE (wireframe)
+// Rotating 3D sphere that morphs into cube/torus/etc.
+// Glowing edges, same palette.
+// ══════════════════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c4'),cx=cv.getContext('2d');
+  let W,H,t=0;
+  let mx=.5,my=.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/W;my=e.clientY/H});
+
+  const LABELS3=['Graph','DP','BFS','Hash','Sort','O(1)','DFS','Math'];
+  const RES=18; // grid resolution
+
+  function init(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+
+  function project(x,y,z,cx2,cy2){
+    const fov=500;
+    const scale=fov/(fov+z);
+    return{x:cx2+x*scale,y:cy2+y*scale,z,scale};
+  }
+
+  function morphPoint(u,v,morphT){
+    // morphT 0..1: sphere → cube → torus → sphere
+    const phase=morphT%(Math.PI*2);
+    const blend=(Math.cos(phase)+1)/2; // 0..1
+
+    // sphere
+    const su=Math.cos(u)*Math.sin(v);
+    const sv=Math.sin(u)*Math.sin(v);
+    const sw=Math.cos(v);
+
+    // torus
+    const R=1.0,r=0.42;
+    const tu=(R+r*Math.cos(v))*Math.cos(u);
+    const tv=(R+r*Math.cos(v))*Math.sin(u);
+    const tw=r*Math.sin(v);
+
+    const s2=Math.sin(phase*2)*0.5+0.5;
+    return{
+      x:su*(blend)+tu*(1-blend),
+      y:sv*(blend)+tv*(1-blend),
+      z:sw*(blend)+tw*(1-blend),
+    };
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p4').classList.contains('on'))return;
+    t+=0.007;
+    cx.fillStyle='#04080f';cx.fillRect(0,0,W,H);
+    drawOrbs(cx,W,H,(mx-.5)*10,(my-.5)*8);
+
+    const CX=W/2,CY=H/2;
+    const R=Math.min(W,H)*0.24;
+    const rotX=my*0.8-0.4+Math.sin(t*.18)*0.2;
+    const rotY=mx*1.2-0.6+t*.25;
+
+    const cos1=Math.cos(rotX),sin1=Math.sin(rotX);
+    const cos2=Math.cos(rotY),sin2=Math.sin(rotY);
+
+    function rotate(p){
+      // rotate around X
+      let y=p.y*cos1-p.z*sin1, z=p.y*sin1+p.z*cos1;
+      // rotate around Y
+      let x2=p.x*cos2+z*sin2; let z2=-p.x*sin2+z*cos2;
+      return{x:x2,y,z:z2};
+    }
+
+    // build grid
+    const pts=[];
+    for(let i=0;i<=RES;i++){
+      const row=[];
+      for(let j=0;j<=RES;j++){
+        const u=(i/RES)*Math.PI*2;
+        const v=(j/RES)*Math.PI;
+        const p=morphPoint(u,v,t*0.35);
+        const rp=rotate(p);
+        const pp=project(rp.x*R,rp.y*R,rp.z*R+200,CX,CY);
+        row.push({...pp,u,v,raw:rp});
+      }
+      pts.push(row);
+    }
+
+    // draw edges
+    for(let i=0;i<RES;i++){
+      for(let j=0;j<RES;j++){
+        const p00=pts[i][j],p10=pts[i+1][j],p01=pts[i][j+1];
+        const avgZ=(p00.z+p10.z)/2;
+        const alpha=Math.max(0,(avgZ+R)/(R*2))*0.5;
+
+        const gold=(i+j)%7===0;
+        const col=gold?`rgba(251,191,36,${alpha.toFixed(3)})`:`rgba(96,165,250,${(alpha*.7).toFixed(3)})`;
+
+        cx.strokeStyle=col; cx.lineWidth=0.6;
+        cx.beginPath();cx.moveTo(p00.x,p00.y);cx.lineTo(p10.x,p10.y);cx.stroke();
+        cx.beginPath();cx.moveTo(p00.x,p00.y);cx.lineTo(p01.x,p01.y);cx.stroke();
+
+        // bright node at front-facing intersections
+        if(p00.z>R*.5){
+          const ng=cx.createRadialGradient(p00.x,p00.y,0,p00.x,p00.y,5);
+          ng.addColorStop(0,gold?'rgba(251,191,36,0.7)':'rgba(147,197,253,0.6)');
+          ng.addColorStop(1,'rgba(0,0,0,0)');
+          cx.fillStyle=ng;cx.beginPath();cx.arc(p00.x,p00.y,5,0,Math.PI*2);cx.fill();
+        }
+      }
+    }
+    // labels on equator nodes
+    cx.font='9px "JetBrains Mono",monospace';cx.textAlign='center';
+    for(let i=0;i<RES;i++){
+      const p=pts[i][Math.floor(RES/2)];
+      if(p.z>R*.4){
+        const alpha=(p.z-R*.4)/(R*.6);
+        cx.fillStyle=`rgba(147,197,253,${(alpha*.45).toFixed(3)})`;
+        cx.fillText(LABELS3[i%LABELS3.length],p.x,p.y-6);
+      }
+    }
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+
+
+// ══════════════════════════════════════════════════════
+// 5 — LIQUID METAL / METABALLS
+// Glowing fluid blobs that merge and separate.
+// Deep blue/purple/gold glow — extremely premium.
+// ══════════════════════════════════════════════════════
+(function(){
+  const cv=document.getElementById('c5'),cx=cv.getContext('2d');
+  let W,H,t=0,blobs=[];
+  let mx=.5,my=.5;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/W;my=e.clientY/H});
+  let offscreen,octx;
+  const RES=3;
+
+  const BLOBDEF=[
+    {fx:.3,fy:.45,r:160,spx:.0006,spy:.0004,px:0,py:1.2,col:[99,102,241]},
+    {fx:.65,fy:.35,r:140,spx:-.0005,spy:.0007,px:2.1,py:0,col:[59,130,246]},
+    {fx:.5,fy:.65,r:120,spx:.0008,spy:-.0005,px:0,py:2.8,col:[139,92,246]},
+    {fx:.2,fy:.65,r:100,spx:-.0007,spy:-.0006,px:1.5,py:1.5,col:[6,182,212]},
+    {fx:.8,fy:.6, r:110,spx:.0005,spy:.0008,px:3.0,py:0.5,col:[245,158,11]},
+    {fx:.45,fy:.3,r:90, spx:-.0009,spy:.0004,px:0.7,py:2.2,col:[251,191,36]},
+  ];
+
+  function init(){
+    W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;
+    blobs=BLOBDEF.map(b=>({...b}));
+    offscreen=document.createElement('canvas');
+    offscreen.width=Math.ceil(W/RES);offscreen.height=Math.ceil(H/RES);
+    octx=offscreen.getContext('2d');
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!document.getElementById('p5').classList.contains('on'))return;
+    t+=0.008;
+
+    const OW=offscreen.width,OH=offscreen.height;
+    const img=octx.createImageData(OW,OH);
+    const d=img.data;
+
+    // update blob positions
+    for(const b of blobs){
+      b.px+=b.spx*W; b.py+=b.spy*H;
+    }
+
+    // mouse blob
+    const mblob={x:mx*W,y:my*H,r:120,col:[165,180,252]};
+
+    for(let py=0;py<OH;py++){
+      for(let px=0;px<OW;px++){
+        const wx=px*RES, wy=py*RES;
+        let sumR=0,sumG=0,sumB=0,totalW=0;
+
+        for(const b of blobs){
+          const bx=b.fx*W+Math.sin(t*.4+b.px)*W*.12;
+          const by=b.fy*H+Math.cos(t*.3+b.py)*H*.1;
+          const dx=wx-bx, dy=wy-by;
+          const d2=dx*dx+dy*dy;
+          const w=b.r*b.r*b.r*b.r/(d2*d2+1);
+          sumR+=b.col[0]*w; sumG+=b.col[1]*w; sumB+=b.col[2]*w; totalW+=w;
+        }
+        // mouse
+        {
+          const dx=wx-mx*W, dy=wy-my*H;
+          const d2=dx*dx+dy*dy;
+          const w=mblob.r*mblob.r*mblob.r*mblob.r/(d2*d2+1)*0.5;
+          sumR+=mblob.col[0]*w; sumG+=mblob.col[1]*w; sumB+=mblob.col[2]*w; totalW+=w;
+        }
+
+        const v=totalW>0?Math.min(1,totalW/8000000):0;
+        const smooth=v>0.15?1:v/0.15;
+        const r=totalW>0?sumR/totalW:4;
+        const g=totalW>0?sumG/totalW:8;
+        const bl2=totalW>0?sumB/totalW:15;
+
+        const idx=(py*OW+px)*4;
+        d[idx]  =Math.min(255, r*smooth*1.2 + 4*(1-smooth));
+        d[idx+1]=Math.min(255, g*smooth*1.0 + 8*(1-smooth));
+        d[idx+2]=Math.min(255, bl2*smooth*1.1 + 15*(1-smooth));
+        d[idx+3]=255;
+      }
+    }
+    octx.putImageData(img,0,0);
+
+    cx.fillStyle='#04080f';cx.fillRect(0,0,W,H);
+
+    // draw with glow
+    cx.globalAlpha=0.85;
+    cx.filter='blur(8px)';
+    cx.drawImage(offscreen,0,0,W,H);
+    cx.filter='none';
+    cx.globalAlpha=0.4;
+    cx.drawImage(offscreen,0,0,W,H);
+    cx.globalAlpha=1;
+
+    // sharp overlay
+    cx.filter='blur(0px)';
+
+    // vignette
+    const vig=cx.createRadialGradient(W/2,H/2,H*.08,W/2,H/2,H*.85);
+    vig.addColorStop(0,'rgba(4,8,15,0.0)');
+    vig.addColorStop(.55,'rgba(4,8,15,0.35)');
+    vig.addColorStop(1,'rgba(4,8,15,0.9)');
+    cx.fillStyle=vig;cx.fillRect(0,0,W,H);
+
+    // floating labels over blobs
+    cx.font='600 10px "JetBrains Mono",monospace';cx.textAlign='center';
+    const BLOBNAMES=['Indigo','Sapphire','Violet','Cyan','Amber','Gold'];
+    blobs.forEach((b,i)=>{
+      const bx=b.fx*W+Math.sin(t*.4+b.px)*W*.12;
+      const by=b.fy*H+Math.cos(t*.3+b.py)*H*.1;
+      cx.fillStyle=`rgba(${b.col},0.35)`;
+      cx.fillText(BLOBNAMES[i],bx,by);
+    });
+  }
+  init();window.addEventListener('resize',init);frame();
+})();
+</script>
+</body>
+</html>

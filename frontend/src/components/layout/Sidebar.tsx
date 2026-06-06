@@ -15,7 +15,6 @@ const NAV = [
   { to: '/friends',        icon: UserPlus,         label: 'Друзья'          },
   { to: '/teams',          icon: Users,            label: 'Команды'         },
   { to: '/ai-mentor',      icon: Bot,              label: 'AI Наставник'    },
-  { to: '/visualizations', icon: BarChart2,        label: 'Визуализации'    },
   { to: '/leaderboard',    icon: Zap,              label: 'Рейтинг'         },
   { to: '/training',       icon: BookOpen,         label: 'Тренировки'      },
 ];

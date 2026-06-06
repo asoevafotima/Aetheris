@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aetheris — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { font-family: Inter, sans-serif; color: white; background: #04080f; overflow-x: hidden; }
+
+/* SELECTOR */
+.bar { position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(4,8,15,0.97);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.06);padding:9px 24px;display:flex;align-items:center;gap:8px; }
+.bl { color:rgba(255,255,255,0.22);font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-right:4px; }
+.sel { padding:6px 18px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.38);cursor:pointer;font-size:12px;font-family:Inter,sans-serif;font-weight:600;transition:all 0.2s; }
+.sel:hover { border-color:rgba(255,255,255,0.25);color:white; }
+.sel.active { background:white;color:#04080f;border-color:white; }
+.pg { display:none;min-height:100vh;padding-top:46px; }
+.pg.active { display:block; }
+
+/* SHARED CANVAS */
+#bgc { position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none; }
+
+/* SHARED NAV */
+.nav {
+  position:sticky;top:46px;z-index:100;height:62px;
+  display:flex;align-items:center;padding:0 44px;
+  background:rgba(4,8,15,0.65);backdrop-filter:blur(28px);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.nav .logo { display:flex;align-items:center;gap:11px;margin-right:48px; }
+.nav .lm { width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 20px rgba(37,99,235,0.5); }
+.nav .ln { font-weight:800;font-size:16px;letter-spacing:-0.03em; }
+.nav .links { display:flex;gap:2px;flex:1; }
+.nav .nl { padding:6px 13px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.3);background:none;border:none;cursor:pointer;font-family:Inter,sans-serif;transition:color 0.15s; }
+.nav .nl:hover { color:rgba(255,255,255,0.8); }
+.nav .nl.a { color:white;font-weight:600; }
+.nav .right { display:flex;align-items:center;gap:10px; }
+.elo { padding:6px 14px;border-radius:8px;background:rgba(245,158,11,0.09);border:1px solid rgba(245,158,11,0.22);color:#fde68a;font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace; }
+.nav-av { width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;box-shadow:0 0 14px rgba(37,99,235,0.38);cursor:pointer; }
+
+/* GLASS */
+.g { background:rgba(6,12,28,0.6);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.08);border-radius:20px; }
+.g-line::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,transparent,rgba(96,165,250,0.3),rgba(245,158,11,0.2),transparent); }
+
+/* SHARED ELEMENTS */
+.s-label { font-size:10px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(147,197,253,0.35);font-family:'JetBrains Mono',monospace;margin-bottom:16px; }
+.s-hd { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px; }
+.s-title { font-size:14px;font-weight:700; }
+.s-link { font-size:12px;color:#93c5fd;cursor:pointer;font-weight:500;transition:color 0.15s; }
+.s-link:hover { color:white; }
+.live { display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.18);padding:2px 8px;border-radius:5px; }
+.live::before { content:'';width:4px;height:4px;border-radius:50%;background:#4ade80;animation:lp 2s infinite; }
+@keyframes lp{0%,100%{opacity:1}50%{opacity:0.3}}
+.empty { display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:180px;border:1px dashed rgba(255,255,255,0.07);border-radius:14px;padding:36px 20px; }
+.e-t { font-size:14px;font-weight:600;margin-bottom:5px; }
+.e-s { font-size:12px;color:rgba(255,255,255,0.25);line-height:1.65;max-width:240px;margin-bottom:16px; }
+.e-btn { padding:9px 22px;border-radius:8px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:Inter,sans-serif;box-shadow:0 0 18px rgba(29,78,216,0.3);transition:all 0.2s; }
+.e-btn:hover { transform:translateY(-1px);box-shadow:0 0 28px rgba(29,78,216,0.5); }
+.arow { display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:11px;border:1px solid transparent;cursor:pointer;transition:all 0.2s;margin-bottom:4px; }
+.arow:last-child { margin-bottom:0; }
+.arow:hover { background:rgba(37,99,235,0.07);border-color:rgba(59,130,246,0.18);transform:translateX(3px); }
+.arow-ic { width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0; }
+.arow-n { font-size:13.5px;font-weight:600;flex:1; }
+.arow-d { font-size:11px;color:rgba(255,255,255,0.28);margin-top:1px; }
+.arow-a { color:rgba(255,255,255,0.16);transition:all 0.2s; }
+.arow:hover .arow-a { color:#93c5fd; }
+.ctest { padding:13px 16px;border-radius:12px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);margin-bottom:7px;cursor:pointer;transition:all 0.15s; }
+.ctest:last-child { margin-bottom:0; }
+.ctest:hover { border-color:rgba(59,130,246,0.2);background:rgba(37,99,235,0.04); }
+.ct-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:4px; }
+.ct-name { font-size:13px;font-weight:600; }
+.ct-meta { font-size:11px;color:rgba(255,255,255,0.22);font-family:'JetBrains Mono',monospace; }
+
+
+/* ══════════════════════════════════════════════
+   DESIGN 1 — COMMAND
+   Навбар → широкая шапка с именем и метриками →
+   три колонки контента. Строго, красиво, профессионально.
+══════════════════════════════════════════════ */
+#d1 .wrap { position:relative;z-index:1; }
+
+#d1 .header {
+  padding:48px 44px 36px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+#d1 .h-left {}
+#d1 .h-time { font-size:11px;font-weight:600;color:rgba(147,197,253,0.4);letter-spacing:0.18em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:12px; }
+#d1 .h-name { font-size:68px;font-weight:900;letter-spacing:-0.065em;line-height:0.93;margin-bottom:18px; }
+#d1 .h-n1 { color:rgba(255,255,255,0.85); }
+#d1 .h-n2 { background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent; }
+#d1 .h-actions { display:flex;gap:10px; }
+#d1 .ha { padding:12px 26px;border-radius:100px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;border:none;transition:all 0.2s; }
+#d1 .ha1 { background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;box-shadow:0 0 24px rgba(29,78,216,0.4); }
+#d1 .ha1:hover { transform:translateY(-2px);box-shadow:0 0 36px rgba(29,78,216,0.6); }
+#d1 .ha2 { background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)!important;color:rgba(255,255,255,0.6); }
+#d1 .ha2:hover { background:rgba(255,255,255,0.1);color:white; }
+#d1 .h-right { display:flex;gap:0;flex-shrink:0; }
+#d1 .hs { padding:16px 28px;text-align:center;border-left:1px solid rgba(255,255,255,0.07); }
+#d1 .hsv { font-size:34px;font-weight:800;letter-spacing:-0.045em;font-family:'JetBrains Mono',monospace;line-height:1;margin-bottom:5px; }
+#d1 .hsl { font-size:10px;color:rgba(255,255,255,0.2);text-transform:uppercase;letter-spacing:0.12em;font-weight:600; }
+
+#d1 .cols { display:grid;grid-template-columns:1fr 1fr 1fr;min-height:calc(100vh - 340px); }
+#d1 .col { padding:32px 36px;border-right:1px solid rgba(255,255,255,0.06); }
+#d1 .col:last-child { border-right:none; }
+
+
+/* ══════════════════════════════════════════════
+   DESIGN 2 — PROFILE SPLIT
+   Слева — большой профиль. Справа — секции.
+   Имя в профиле. Всё поверх живого фона.
+══════════════════════════════════════════════ */
+#d2 .wrap { position:relative;z-index:1;display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 108px); }
+
+#d2 .left {
+  background:rgba(4,8,15,0.55);backdrop-filter:blur(32px);
+  border-right:1px solid rgba(255,255,255,0.07);
+  padding:44px 32px;display:flex;flex-direction:column;gap:24px;
+  position:sticky;top:108px;height:calc(100vh - 108px);overflow-y:auto;
+}
+#d2 .l-av {
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8,#f59e0b);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:700;
+  box-shadow:0 0 0 3px rgba(37,99,235,0.2),0 0 32px rgba(29,78,216,0.3);
+}
+#d2 .l-name { font-size:24px;font-weight:800;letter-spacing:-0.03em;margin-bottom:3px; }
+#d2 .l-handle { font-size:12px;color:rgba(255,255,255,0.28);font-family:'JetBrains Mono',monospace; }
+#d2 .l-elo {
+  padding:18px 20px;border-radius:16px;
+  background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);
+  position:relative;overflow:hidden;
+}
+#d2 .l-elo::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,rgba(245,158,11,0.5),rgba(253,230,138,0.3),transparent); }
+#d2 .le-l { font-size:10px;font-weight:700;color:rgba(253,230,138,0.4);letter-spacing:0.16em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px; }
+#d2 .le-v { font-size:48px;font-weight:900;color:#fde68a;font-family:'JetBrains Mono',monospace;letter-spacing:-0.05em;line-height:1; }
+#d2 .l-stats { border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden; }
+#d2 .lst { display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.06); }
+#d2 .lst:last-child { border-bottom:none; }
+#d2 .lst-k { font-size:12px;color:rgba(255,255,255,0.3); }
+#d2 .lst-v { font-size:17px;font-weight:700;font-family:'JetBrains Mono',monospace; }
+#d2 .l-actions { display:flex;flex-direction:column;gap:4px; }
+#d2 .l-btn-main { width:100%;padding:13px;border-radius:12px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:Inter,sans-serif;box-shadow:0 0 20px rgba(29,78,216,0.3);transition:all 0.2s; }
+#d2 .l-btn-main:hover { transform:translateY(-2px);box-shadow:0 0 32px rgba(29,78,216,0.5); }
+#d2 .l-btn-sec { width:100%;padding:11px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);color:rgba(255,255,255,0.55);font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;transition:all 0.15s; }
+#d2 .l-btn-sec:hover { background:rgba(255,255,255,0.08);color:white; }
+
+#d2 .right { padding:44px 44px;display:flex;flex-direction:column;gap:24px; }
+#d2 .r-greeting { margin-bottom:4px; }
+#d2 .rg-tag { font-size:11px;color:rgba(255,255,255,0.2);font-weight:600;letter-spacing:0.12em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px; }
+#d2 .rg-title { font-size:40px;font-weight:800;letter-spacing:-0.045em;line-height:1;margin-bottom:8px; }
+#d2 .rg-gold { background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent; }
+#d2 .rg-sub { font-size:13px;color:rgba(255,255,255,0.28);line-height:1.65; }
+#d2 .r-panel { padding:22px 26px;position:relative; }
+#d2 .r-2col { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+
+
+/* ══════════════════════════════════════════════
+   DESIGN 3 — IMMERSIVE
+   Первый экран — полностью живой фон с именем.
+   Скролл → красивые секции с контентом.
+══════════════════════════════════════════════ */
+#d3 .wrap { position:relative;z-index:1; }
+
+#d3 .splash {
+  height:calc(100vh - 108px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:0 44px;text-align:center;position:relative;
+}
+#d3 .splash-vignette { position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 80% at 50% 50%,rgba(4,8,15,0.2) 0%,rgba(4,8,15,0.65) 100%); }
+#d3 .splash-content { position:relative;z-index:1; }
+#d3 .sp-tag { font-size:11px;font-weight:600;color:rgba(147,197,253,0.4);letter-spacing:0.2em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:10px; }
+#d3 .sp-dot { width:5px;height:5px;border-radius:50%;background:#60a5fa;box-shadow:0 0 10px #60a5fa;animation:lp 2s infinite; }
+#d3 .sp-name { font-size:100px;font-weight:900;letter-spacing:-0.07em;line-height:0.9;margin-bottom:22px; }
+#d3 .sp-n1 { display:block;background:linear-gradient(140deg,#fff 15%,#bfdbfe 45%,#60a5fa 70%,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 60px rgba(96,165,250,0.2)); }
+#d3 .sp-n2 { display:block;background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 50px rgba(245,158,11,0.2)); }
+#d3 .sp-sub { font-size:16px;color:rgba(255,255,255,0.3);line-height:1.7;max-width:520px;margin:0 auto 36px; }
+#d3 .sp-btns { display:flex;gap:12px;justify-content:center;margin-bottom:56px; }
+#d3 .spb1 { padding:14px 34px;border-radius:100px;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:Inter,sans-serif;box-shadow:0 0 28px rgba(29,78,216,0.45);transition:all 0.25s; }
+#d3 .spb1:hover { transform:translateY(-3px);box-shadow:0 0 44px rgba(29,78,216,0.65); }
+#d3 .spb2 { padding:14px 34px;border-radius:100px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.65);font-size:15px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;transition:all 0.2s; }
+#d3 .spb2:hover { background:rgba(255,255,255,0.12);color:white; }
+#d3 .sp-stats { display:flex;gap:0;border:1px solid rgba(255,255,255,0.08);border-radius:18px;background:rgba(4,8,15,0.5);backdrop-filter:blur(20px);overflow:hidden; }
+#d3 .sps { padding:18px 32px;text-align:center;border-right:1px solid rgba(255,255,255,0.07); }
+#d3 .sps:last-child { border-right:none; }
+#d3 .sps-v { font-size:26px;font-weight:800;letter-spacing:-0.04em;font-family:'JetBrains Mono',monospace;line-height:1;margin-bottom:4px; }
+#d3 .sps-l { font-size:10px;color:rgba(255,255,255,0.2);text-transform:uppercase;letter-spacing:0.12em;font-weight:600; }
+#d3 .sp-scroll { position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:rgba(255,255,255,0.15);font-size:9px;letter-spacing:0.18em;text-transform:uppercase; }
+#d3 .sp-scroll-bar { width:1px;height:36px;background:linear-gradient(180deg,rgba(96,165,250,0.5),transparent);animation:sb 2s ease-in-out infinite; }
+@keyframes sb{0%,100%{opacity:0.4}50%{opacity:1}}
+
+#d3 .sections { border-top:1px solid rgba(255,255,255,0.06); }
+#d3 .sec-row { display:grid;padding:44px 44px;gap:20px;border-bottom:1px solid rgba(255,255,255,0.06); }
+#d3 .sec-row-3 { grid-template-columns:1fr 1fr 1fr; }
+#d3 .sec-row-2 { grid-template-columns:1fr 320px; }
+#d3 .sec-panel { padding:24px 26px;position:relative; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="bl">Вариант</span>
+  <button class="sel active" onclick="show(1)">① Command</button>
+  <button class="sel" onclick="show(2)">② Profile Split</button>
+  <button class="sel" onclick="show(3)">③ Immersive</button>
+</div>
+
+<canvas id="bgc"></canvas>
+
+
+<!-- ══════════ DESIGN 1: COMMAND ══════════ -->
+<div id="d1" class="pg active">
+  <div class="wrap">
+    <nav class="nav">
+      <div class="logo"><div class="lm">⚡</div><span class="ln">Aetheris</span></div>
+      <div class="links"><button class="nl a">Главная</button><button class="nl">Задачи</button><button class="nl">Контесты</button><button class="nl">Дуэли</button><button class="nl">Команды</button><button class="nl">AI Ментор</button><button class="nl">Рейтинг</button><button class="nl">Тренировки</button></div>
+      <div class="right"><div class="elo">⚡ 1200</div><div class="nav-av">F</div></div>
+    </nav>
+
+    <div class="header">
+      <div class="h-left">
+        <div class="h-time">Добрый вечер · 5 июня 2026</div>
+        <div class="h-name">
+          <span class="h-n1">Привет, </span><span class="h-n2">fimoqx.</span>
+        </div>
+        <div class="h-actions">
+          <button class="ha ha1">Решить задачу</button>
+          <button class="ha ha2">Начать дуэль</button>
+          <button class="ha ha2">AI Наставник</button>
+        </div>
+      </div>
+      <div class="h-right g">
+        <div class="hs"><div class="hsv" style="color:#93c5fd;">0</div><div class="hsl">Задач</div></div>
+        <div class="hs"><div class="hsv" style="color:#fde68a;">1200</div><div class="hsl">Рейтинг</div></div>
+        <div class="hs"><div class="hsv" style="color:#67e8f9;">3</div><div class="hsl">Контестов</div></div>
+        <div class="hs"><div class="hsv" style="color:#f87171;">0</div><div class="hsl">Дуэлей</div></div>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="col">
+        <div class="s-hd"><span class="s-title">Последние посылки</span><span class="s-link">Все →</span></div>
+        <div class="empty">
+          <div class="e-t">Нет посылок</div>
+          <div class="e-s">Начни решать задачи — все результаты появятся здесь.</div>
+          <button class="e-btn">Открыть задачи</button>
+        </div>
+      </div>
+      <div class="col">
+        <div class="s-hd"><span class="s-title">Контесты</span><span class="s-link">Все →</span></div>
+        <div class="ctest"><div class="ct-top"><span class="ct-name">Test Contest</span><span class="live">LIVE</span></div><div class="ct-meta">4 мин. назад · Codeforces Round</div></div>
+        <div class="ctest"><div class="ct-top"><span class="ct-name">f</span></div><div class="ct-meta">1 мин. назад</div></div>
+      </div>
+      <div class="col">
+        <div class="s-label">Быстрый старт</div>
+        <div class="arow"><div class="arow-ic">📝</div><div><div class="arow-n">Задачи</div><div class="arow-d">800+ задач на Python и C++</div></div><span class="arow-a">›</span></div>
+        <div class="arow"><div class="arow-ic">⚔</div><div><div class="arow-n">Дуэль 1v1</div><div class="arow-d">Сразись с соперником</div></div><span class="arow-a">›</span></div>
+        <div class="arow"><div class="arow-ic">◎</div><div><div class="arow-n">AI Наставник</div><div class="arow-d">Подсказки и разбор кода</div></div><span class="arow-a">›</span></div>
+        <div class="arow"><div class="arow-ic">▷</div><div><div class="arow-n">Тренировки</div><div class="arow-d">Персональный план</div></div><span class="arow-a">›</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ DESIGN 2: PROFILE SPLIT ══════════ -->
+<div id="d2" class="pg">
+  <nav class="nav">
+    <div class="logo"><div class="lm">⚡</div><span class="ln">Aetheris</span></div>
+    <div class="links"><button class="nl a">Главная</button><button class="nl">Задачи</button><button class="nl">Контесты</button><button class="nl">Дуэли</button><button class="nl">Команды</button><button class="nl">AI Ментор</button><button class="nl">Рейтинг</button><button class="nl">Тренировки</button></div>
+    <div class="right"><div class="nav-av">F</div></div>
+  </nav>
+  <div class="wrap">
+    <div class="left">
+      <div class="l-av">F</div>
+      <div>
+        <div class="l-name">fimoqx</div>
+        <div class="l-handle">@fimoqx · Сезон 2026</div>
+      </div>
+      <div class="l-elo">
+        <div class="le-l">Рейтинг ELO</div>
+        <div class="le-v">1200</div>
+      </div>
+      <div class="l-stats">
+        <div class="lst"><span class="lst-k">Задач решено</span><span class="lst-v" style="color:#93c5fd;">0</span></div>
+        <div class="lst"><span class="lst-k">Посылок всего</span><span class="lst-v" style="color:#c4b5fd;">0</span></div>
+        <div class="lst"><span class="lst-k">Контестов</span><span class="lst-v" style="color:#67e8f9;">3</span></div>
+        <div class="lst"><span class="lst-k">Дуэлей</span><span class="lst-v" style="color:#f87171;">0</span></div>
+      </div>
+      <div class="l-actions">
+        <button class="l-btn-main">Решить задачу →</button>
+        <button class="l-btn-sec">Начать дуэль</button>
+        <button class="l-btn-sec">AI Наставник</button>
+      </div>
+    </div>
+    <div class="right">
+      <div class="r-greeting">
+        <div class="rg-tag">Добрый вечер · 5 июня 2026</div>
+        <div class="rg-title">Привет, <span class="rg-gold">fimoqx</span></div>
+        <div class="rg-sub">Готов решать задачи и побеждать сегодня?</div>
+      </div>
+      <div class="r-panel g g-line" style="position:relative;">
+        <div class="s-hd"><span class="s-title">Последние посылки</span><span class="s-link">Все задачи →</span></div>
+        <div class="empty">
+          <div class="e-t">Нет посылок</div>
+          <div class="e-s">Начни решать задачи — все результаты будут здесь.</div>
+          <button class="e-btn">Открыть задачи</button>
+        </div>
+      </div>
+      <div class="r-2col">
+        <div class="r-panel g g-line" style="position:relative;">
+          <div class="s-hd"><span class="s-title">Контесты</span><span class="s-link">Все →</span></div>
+          <div class="ctest"><div class="ct-top"><span class="ct-name">Test Contest</span><span class="live">LIVE</span></div><div class="ct-meta">4 мин. назад</div></div>
+          <div class="ctest"><div class="ct-top"><span class="ct-name">f</span></div><div class="ct-meta">1 мин. назад</div></div>
+        </div>
+        <div class="r-panel g g-line" style="position:relative;">
+          <div class="s-label" style="margin-bottom:12px;">Действия</div>
+          <div class="arow"><div class="arow-ic">📝</div><span class="arow-n">Задачи</span><span class="arow-a">›</span></div>
+          <div class="arow"><div class="arow-ic">⚔</div><span class="arow-n">Дуэль</span><span class="arow-a">›</span></div>
+          <div class="arow"><div class="arow-ic">◎</div><span class="arow-n">AI Ментор</span><span class="arow-a">›</span></div>
+          <div class="arow"><div class="arow-ic">▷</div><span class="arow-n">Тренировки</span><span class="arow-a">›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ DESIGN 3: IMMERSIVE ══════════ -->
+<div id="d3" class="pg">
+  <nav class="nav">
+    <div class="logo"><div class="lm">⚡</div><span class="ln">Aetheris</span></div>
+    <div class="links"><button class="nl a">Главная</button><button class="nl">Задачи</button><button class="nl">Контесты</button><button class="nl">Дуэли</button><button class="nl">Команды</button><button class="nl">AI Ментор</button><button class="nl">Рейтинг</button><button class="nl">Тренировки</button></div>
+    <div class="right"><div class="elo">⚡ 1200</div><div class="nav-av">F</div></div>
+  </nav>
+  <div class="wrap">
+    <div class="splash">
+      <div class="splash-vignette"></div>
+      <div class="splash-content">
+        <div class="sp-tag"><div class="sp-dot"></div>Добрый вечер · Сезон 2026</div>
+        <div class="sp-name">
+          <span class="sp-n1">Привет,</span>
+          <span class="sp-n2">fimoqx.</span>
+        </div>
+        <div class="sp-sub">Решай задачи, побеждай в контестах, сражайся в дуэлях. Твой рейтинг растёт с каждым решением.</div>
+        <div class="sp-btns">
+          <button class="spb1">Решить задачу</button>
+          <button class="spb2">Начать дуэль</button>
+          <button class="spb2">AI Наставник</button>
+        </div>
+        <div class="sp-stats">
+          <div class="sps"><div class="sps-v" style="color:#93c5fd;">0</div><div class="sps-l">Задач</div></div>
+          <div class="sps"><div class="sps-v" style="color:#fde68a;">1200</div><div class="sps-l">Рейтинг</div></div>
+          <div class="sps"><div class="sps-v" style="color:#c4b5fd;">0</div><div class="sps-l">Посылок</div></div>
+          <div class="sps"><div class="sps-v" style="color:#67e8f9;">3</div><div class="sps-l">Контестов</div></div>
+          <div class="sps"><div class="sps-v" style="color:#f87171;">0</div><div class="sps-l">Дуэлей</div></div>
+        </div>
+      </div>
+      <div class="sp-scroll"><div class="sp-scroll-bar"></div>Scroll</div>
+    </div>
+
+    <div class="sections">
+      <div class="sec-row sec-row-3">
+        <div class="sec-panel g g-line" style="position:relative;">
+          <div class="s-hd"><span class="s-title">Последние посылки</span><span class="s-link">Все →</span></div>
+          <div class="empty">
+            <div class="e-t">Нет посылок</div>
+            <div class="e-s">Начни решать задачи.</div>
+            <button class="e-btn">Открыть задачи</button>
+          </div>
+        </div>
+        <div class="sec-panel g g-line" style="position:relative;">
+          <div class="s-hd"><span class="s-title">Контесты</span><span class="s-link">Все →</span></div>
+          <div class="ctest"><div class="ct-top"><span class="ct-name">Test Contest</span><span class="live">LIVE</span></div><div class="ct-meta">4 мин. назад · Codeforces</div></div>
+          <div class="ctest"><div class="ct-top"><span class="ct-name">f</span></div><div class="ct-meta">1 мин. назад</div></div>
+        </div>
+        <div class="sec-panel g g-line" style="position:relative;">
+          <div class="s-label" style="margin-bottom:14px;">Быстрый старт</div>
+          <div class="arow"><div class="arow-ic">📝</div><div><div class="arow-n">Задачи</div><div class="arow-d">800+ задач разного уровня</div></div><span class="arow-a">›</span></div>
+          <div class="arow"><div class="arow-ic">⚔</div><div><div class="arow-n">Дуэль 1v1</div><div class="arow-d">Сразись с соперником</div></div><span class="arow-a">›</span></div>
+          <div class="arow"><div class="arow-ic">◎</div><div><div class="arow-n">AI Наставник</div><div class="arow-d">Groq LLM — подсказки</div></div><span class="arow-a">›</span></div>
+          <div class="arow"><div class="arow-ic">▷</div><div><div class="arow-n">Тренировки</div><div class="arow-d">Персональный план</div></div><span class="arow-a">›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+function show(n){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sel').forEach((b,i)=>b.classList.toggle('active',i===n-1));
+  document.getElementById('d'+n).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+/* ── BACKGROUND: particles + graph only (NO sphere) ── */
+const cv = document.getElementById('bgc');
+const ctx = cv.getContext('2d');
+
+function resize(){
+  cv.width = window.innerWidth * devicePixelRatio;
+  cv.height = window.innerHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const W = () => cv.offsetWidth;
+const H = () => cv.offsetHeight;
+let mx = W()/2, my = H()/2;
+window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+const LABELS = ['Graph','DP','Greedy','Math','Strings','Trees','BFS','DFS','Sort','Hash','Heap','Binary','Floyd','Dijkstra','O(n)','O(log n)'];
+
+/* More nodes, spread across entire screen */
+const nodes = Array.from({length: 70}, (_, i) => ({
+  x: Math.random() * window.innerWidth,
+  y: Math.random() * window.innerHeight,
+  vx: (Math.random() - .5) * .35,
+  vy: (Math.random() - .5) * .35,
+  r: Math.random() * 3 + 1.2,           /* bigger */
+  pulse: Math.random() * Math.PI * 2,
+  speed: Math.random() * .012 + .005,
+  label: Math.random() > .5 ? LABELS[Math.floor(Math.random() * LABELS.length)] : null
+}));
+
+const edges = [];
+for(let i = 0; i < nodes.length; i++){
+  const k = Math.floor(Math.random() * 3) + 1;
+  for(let j = 0; j < k; j++) edges.push([i, Math.floor(Math.random() * nodes.length)]);
+}
+
+let packets = [], lastPkt = 0;
+
+function draw(ts){
+  const w = W(), h = H();
+  ctx.clearRect(0, 0, w, h);
+
+  /* Subtle background gradient */
+  const g1 = ctx.createRadialGradient(w*.2, h*.25, 0, w*.2, h*.25, w*.55);
+  g1.addColorStop(0, 'rgba(29,78,216,0.12)'); g1.addColorStop(1, 'rgba(4,8,15,0)');
+  ctx.fillStyle = g1; ctx.fillRect(0, 0, w, h);
+  const g2 = ctx.createRadialGradient(w*.8, h*.75, 0, w*.8, h*.75, w*.4);
+  g2.addColorStop(0, 'rgba(245,158,11,0.07)'); g2.addColorStop(1, 'rgba(4,8,15,0)');
+  ctx.fillStyle = g2; ctx.fillRect(0, 0, w, h);
+
+  const mdx = (mx - w/2) * .014;
+  const mdy = (my - h/2) * .014;
+
+  /* Update nodes */
+  nodes.forEach(n => {
+    n.x += n.vx; n.y += n.vy; n.pulse += n.speed;
+    if(n.x < -50) n.x = w + 50;
+    if(n.x > w + 50) n.x = -50;
+    if(n.y < -50) n.y = h + 50;
+    if(n.y > h + 50) n.y = -50;
+  });
+
+  /* Draw edges */
+  edges.forEach(([i, j]) => {
+    const a = nodes[i], b = nodes[j];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist > 260) return;
+    const al = (1 - dist/260) * .12;
+    ctx.beginPath();
+    ctx.moveTo(a.x + mdx, a.y + mdy);
+    ctx.lineTo(b.x + mdx, b.y + mdy);
+    ctx.strokeStyle = `rgba(96,165,250,${al})`;
+    ctx.lineWidth = .8; ctx.stroke();
+  });
+
+  /* Packets */
+  if(ts - lastPkt > 280){
+    packets.push({ e: edges[Math.floor(Math.random()*edges.length)], t: 0, sp: .006 + Math.random()*.007 });
+    lastPkt = ts;
+  }
+  packets = packets.filter(p => p.t <= 1);
+  packets.forEach(p => {
+    p.t += p.sp;
+    const a = nodes[p.e[0]], b = nodes[p.e[1]];
+    const x = a.x + (b.x - a.x)*p.t + mdx;
+    const y = a.y + (b.y - a.y)*p.t + mdy;
+    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(147,197,253,0.9)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(96,165,250,0.15)'; ctx.fill();
+  });
+
+  /* Draw nodes — bigger */
+  nodes.forEach(n => {
+    const px = n.x + mdx, py = n.y + mdy;
+    const pl = Math.sin(n.pulse) * .5 + .5;
+
+    /* Glow halo */
+    ctx.beginPath(); ctx.arc(px, py, n.r + 5, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(96,165,250,${.03 + pl*.06})`; ctx.fill();
+
+    /* Core */
+    ctx.beginPath(); ctx.arc(px, py, n.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(147,197,253,${.5 + pl*.45})`; ctx.fill();
+
+    /* Label */
+    if(n.label){
+      ctx.font = '11px Inter, sans-serif';
+      ctx.fillStyle = `rgba(147,197,253,${.3 + pl*.25})`;
+      ctx.textAlign = 'center';
+      ctx.fillText(n.label, px, py - n.r - 6);
+    }
+  });
+
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

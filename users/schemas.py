@@ -35,6 +35,9 @@ class UserResponse(BaseModel):
 class UserShortResponse(BaseModel):
     id: UUID
     username: str
+    email: Optional[str] = None
+    role: Optional[UserRole] = UserRole.user
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

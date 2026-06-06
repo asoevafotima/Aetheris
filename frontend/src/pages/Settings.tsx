@@ -1,241 +1,261 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, User, Bell, Shield, Save, Camera, Sun, Moon, Globe } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, Shield, Save, Camera, Sun, Moon, Globe, Check } from 'lucide-react';
 import { profilesApi, settingsApi, usersApi } from '../api/endpoints';
-import { Button } from '../components/ui/Button';
-import { Input, Textarea } from '../components/ui/Input';
-import { Card, CardBody, CardHeader } from '../components/ui/Card';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore }  from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { useT } from '../i18n';
-
-const TABS = (t: ReturnType<typeof useT>) => [
-  { id: 'profile',   icon: User,         label: t.settings.profile },
-  { id: 'account',   icon: Shield,       label: t.settings.account },
-  { id: 'settings',  icon: SettingsIcon, label: t.settings.prefs   },
-  { id: 'notifs',    icon: Bell,         label: t.settings.notifs  },
-];
+import { useT }          from '../i18n';
+import { BackgroundGraph } from '../components/BackgroundGraph';
 
 export function Settings() {
-  const [tab, setTab] = useState('profile');
-  const { user, fetchMe } = useAuthStore();
-  const { theme, lang } = useThemeStore();
-  const t  = useT();
-  const qc = useQueryClient();
-  const tabs = TABS(t);
-
-  const { data: profile } = useQuery({
-    queryKey: ['profile', 'me'],
-    queryFn: profilesApi.me,
-  });
-
-  const { data: settings } = useQuery({
-    queryKey: ['settings', 'me'],
-    queryFn: settingsApi.me,
-  });
-
-  const [profileForm, setProfileForm] = useState({
-    first_name: '', last_name: '', bio: '', country: '', city: '',
-    github_url: '', linkedin_url: '', website_url: '',
-  });
-
-  const [accountForm, setAccountForm] = useState({ username: '', email: '' });
+  const [tab, setTab]   = useState('profile');
   const [saved, setSaved] = useState(false);
+  const { user, fetchMe } = useAuthStore();
+  const { theme, lang }   = useThemeStore();
+  const dark = theme === 'dark';
+  const t    = useT();
+  const qc   = useQueryClient();
+
+  const pageBg    = dark ? '#04080f'                 : '#f1f5f9';
+  const t1        = dark ? 'rgba(255,255,255,0.9)'   : 'rgba(0,0,0,0.88)';
+  const t2        = dark ? 'rgba(255,255,255,0.45)'  : 'rgba(0,0,0,0.5)';
+  const t3        = dark ? 'rgba(255,255,255,0.22)'  : 'rgba(0,0,0,0.28)';
+  const cardBg    = dark ? 'rgba(6,12,28,0.75)'      : 'rgba(255,255,255,0.97)';
+  const cardBord  = dark ? 'rgba(255,255,255,0.07)'  : 'rgba(0,0,0,0.08)';
+  const inputBg   = dark ? 'rgba(255,255,255,0.06)'  : 'rgba(0,0,0,0.04)';
+  const inputBord = dark ? 'rgba(255,255,255,0.12)'  : 'rgba(0,0,0,0.12)';
+  const chipBg    = dark ? 'rgba(255,255,255,0.05)'  : 'rgba(0,0,0,0.04)';
+  const chipBord  = dark ? 'rgba(255,255,255,0.1)'   : 'rgba(0,0,0,0.09)';
+
+  const inputSt = { width:'100%', background:inputBg, border:`1px solid ${inputBord}`, borderRadius:11, color:t1, fontSize:13, padding:'11px 13px', outline:'none', fontFamily:'inherit', boxSizing:'border-box' as const, transition:'border-color 0.15s' };
+  const labelSt = { fontSize:11, fontWeight:800 as const, color:t3, textTransform:'uppercase' as const, letterSpacing:'0.08em' as const, display:'block' as const, marginBottom:8 };
+
+  const { data: profile }  = useQuery({ queryKey:['profile','me'], queryFn:profilesApi.me });
+  const { data: settingsData } = useQuery({ queryKey:['settings','me'], queryFn:settingsApi.me });
+
+  const [pf, setPf] = useState({ first_name:'',last_name:'',bio:'',country:'',city:'',github_url:'',linkedin_url:'',website_url:'' });
+  const [af, setAf] = useState({ username:'',email:'' });
 
   useEffect(() => {
-    if (profile) {
-      setProfileForm({
-        first_name:   profile.first_name   ?? '',
-        last_name:    profile.last_name    ?? '',
-        bio:          profile.bio          ?? '',
-        country:      profile.country      ?? '',
-        city:         profile.city         ?? '',
-        github_url:   profile.github_url   ?? '',
-        linkedin_url: profile.linkedin_url ?? '',
-        website_url:  profile.website_url  ?? '',
-      });
-    }
+    if (profile) setPf({ first_name:profile.first_name??'', last_name:profile.last_name??'', bio:profile.bio??'', country:profile.country??'', city:profile.city??'', github_url:profile.github_url??'', linkedin_url:profile.linkedin_url??'', website_url:profile.website_url??'' });
   }, [profile]);
+  useEffect(() => { if (user) setAf({ username:user.username, email:user.email }); }, [user]);
 
-  useEffect(() => {
-    if (user) setAccountForm({ username: user.username, email: user.email });
-  }, [user]);
+  const showSaved = () => { setSaved(true); setTimeout(()=>setSaved(false), 2200); };
+  const profileMut  = useMutation({ mutationFn:()=>profilesApi.updateMe(pf),   onSuccess:()=>{qc.invalidateQueries({queryKey:['profile','me']});showSaved();} });
+  const accountMut  = useMutation({ mutationFn:()=>usersApi.updateMe({username:af.username,email:af.email}), onSuccess:()=>{fetchMe();showSaved();} });
+  const settingsMut = useMutation({ mutationFn:(data:object)=>settingsApi.update(data), onSuccess:()=>showSaved() });
 
-  const showSaved = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const TABS = [
+    { id:'profile',  Icon:User,         label:t.settings.profile  },
+    { id:'account',  Icon:Shield,        label:t.settings.account  },
+    { id:'settings', Icon:SettingsIcon,  label:t.settings.prefs    },
+    { id:'notifs',   Icon:Bell,          label:t.settings.notifs   },
+  ];
 
-  const profileMut = useMutation({
-    mutationFn: () => profilesApi.updateMe(profileForm),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['profile', 'me'] }); showSaved(); },
-  });
+  const Field = ({ label, value, onChange, type='text', placeholder='' }: { label:string;value:string;onChange:(v:string)=>void;type?:string;placeholder?:string }) => (
+    <div>
+      <label style={labelSt}>{label}</label>
+      <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}
+        onFocus={e=>e.target.style.borderColor='rgba(99,102,241,0.5)'} onBlur={e=>e.target.style.borderColor=inputBord}/>
+    </div>
+  );
 
-  const accountMut = useMutation({
-    mutationFn: () => usersApi.updateMe({ username: accountForm.username, email: accountForm.email }),
-    onSuccess: () => { fetchMe(); showSaved(); },
-  });
-
-  const settingsMut = useMutation({
-    mutationFn: (data: object) => settingsApi.update(data),
-    onSuccess: () => showSaved(),
-  });
+  const SaveBtn = ({ onClick, loading }: { onClick:()=>void; loading:boolean }) => (
+    <button onClick={onClick} disabled={loading}
+      style={{ display:'flex',alignItems:'center',gap:8,padding:'11px 22px',background:'linear-gradient(135deg,#6366f1,#4f46e5)',boxShadow:'0 0 22px rgba(99,102,241,0.35)',border:'none',borderRadius:12,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',transition:'transform 0.15s' }}
+      onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
+      <Save size={14}/> {loading?'Сохранение...':t.common.save}
+    </button>
+  );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-3xl font-bold text-app-1 mb-1">{t.settings.title}</h1>
-        <p className="text-app-2">{t.settings.subtitle}</p>
-      </motion.div>
+    <div style={{ position:'relative',minHeight:'calc(100vh - 56px)',background:pageBg }}>
+      <BackgroundGraph noSphere light={!dark}/>
 
-      {saved && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-3 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-700 text-sm flex items-center gap-2">
-          <Save size={14} /> {t.settings.saved}
+      <div style={{ position:'relative',zIndex:1,maxWidth:900,margin:'0 auto',padding:'36px 36px 60px' }}>
+
+        {/* Header */}
+        <motion.div initial={{opacity:0,y:-16}} animate={{opacity:1,y:0}} transition={{duration:0.4}} style={{ marginBottom:28 }}>
+          <h1 style={{ fontSize:30,fontWeight:900,color:t1,margin:'0 0 6px',letterSpacing:'-0.02em' }}>{t.settings.title}</h1>
+          <p style={{ fontSize:14,color:t2,margin:0 }}>{t.settings.subtitle}</p>
         </motion.div>
-      )}
 
-      <div className="flex gap-6">
-        {/* Tab list */}
-        <div className="w-48 shrink-0 flex flex-col gap-1">
-          {tabs.map(({ id, icon: Icon, label }) => (
-            <button key={id} onClick={() => setTab(id)}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer text-left border ${
-                tab === id
-                  ? 'bg-[var(--accent-light)] text-[var(--accent-text)] border-[var(--accent-light)]'
-                  : 'text-app-2 hover:text-app-1 hover:bg-[var(--hover)] border-transparent'
-              }`}
-            >
-              <Icon size={16} />{label}
-            </button>
-          ))}
-        </div>
+        {/* Saved toast */}
+        {saved && (
+          <motion.div initial={{opacity:0,y:-10,scale:0.95}} animate={{opacity:1,y:0,scale:1}}
+            style={{ marginBottom:18,padding:'11px 16px',borderRadius:13,background:'rgba(34,197,94,0.12)',border:'1px solid rgba(34,197,94,0.3)',color:'#22c55e',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:8 }}>
+            <Check size={15}/> {t.settings.saved}
+          </motion.div>
+        )}
 
-        <div className="flex-1 flex flex-col gap-4">
-          {/* Профиль */}
-          {tab === 'profile' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-4">
-              <Card>
-                <CardHeader><h2 className="font-semibold text-app-1 flex items-center gap-2"><User size={16} /> {t.settings.profile}</h2></CardHeader>
-                <CardBody className="flex flex-col gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-2xl font-black text-white">
+        <div style={{ display:'flex',gap:20 }}>
+          {/* Tab sidebar */}
+          <div style={{ width:210,flexShrink:0,display:'flex',flexDirection:'column',gap:4 }}>
+            {TABS.map(({id,Icon,label})=>(
+              <button key={id} onClick={()=>setTab(id)}
+                style={{ display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:12,border:`1px solid ${tab===id?'rgba(99,102,241,0.35)':'transparent'}`,background:tab===id?'rgba(99,102,241,0.1)':'transparent',color:tab===id?'#818cf8':t2,fontSize:13,fontWeight:tab===id?700:500,cursor:'pointer',textAlign:'left',transition:'all 0.15s' }}
+                onMouseEnter={e=>{if(tab!==id){e.currentTarget.style.background=chipBg;e.currentTarget.style.color=t1;}}}
+                onMouseLeave={e=>{if(tab!==id){e.currentTarget.style.background='transparent';e.currentTarget.style.color=t2;}}}>
+                <Icon size={16}/> {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div style={{ flex:1,display:'flex',flexDirection:'column',gap:16 }}>
+
+            {/* Profile tab */}
+            {tab==='profile' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{ background:cardBg,border:`1px solid ${cardBord}`,borderRadius:20,overflow:'hidden',backdropFilter:'blur(24px)',boxShadow:dark?'none':'0 4px 24px rgba(0,0,0,0.06)' }}>
+                <div style={{ height:2,background:'linear-gradient(90deg,#6366f1,#06b6d4,transparent)' }}/>
+                <div style={{ padding:'24px',display:'flex',flexDirection:'column',gap:18 }}>
+                  <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                    <User size={16} color="#818cf8"/>
+                    <span style={{ fontSize:15,fontWeight:700,color:t1 }}>{t.settings.profile}</span>
+                  </div>
+
+                  {/* Avatar */}
+                  <div style={{ display:'flex',alignItems:'center',gap:16 }}>
+                    <div style={{ width:72,height:72,borderRadius:16,background:'linear-gradient(135deg,#6366f1,#06b6d4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:900,color:'#fff',boxShadow:'0 0 24px rgba(99,102,241,0.3)' }}>
                       {user?.username[0].toUpperCase()}
                     </div>
-                    <Button variant="outline" size="sm" icon={<Camera size={14} />}>
-                      {lang === 'ru' ? 'Сменить фото' : 'Change Avatar'}
-                    </Button>
+                    <button style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 16px',background:chipBg,border:`1px solid ${chipBord}`,borderRadius:11,color:t2,fontSize:13,fontWeight:600,cursor:'pointer' }}>
+                      <Camera size={14}/> Сменить фото
+                    </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input label={lang === 'ru' ? 'Имя' : 'First Name'} value={profileForm.first_name} onChange={e => setProfileForm({ ...profileForm, first_name: e.target.value })} placeholder="Иван" />
-                    <Input label={lang === 'ru' ? 'Фамилия' : 'Last Name'} value={profileForm.last_name} onChange={e => setProfileForm({ ...profileForm, last_name: e.target.value })} placeholder="Иванов" />
-                  </div>
-                  <Textarea label={lang === 'ru' ? 'О себе' : 'Bio'} value={profileForm.bio} onChange={e => setProfileForm({ ...profileForm, bio: e.target.value })} placeholder={lang === 'ru' ? 'Расскажи о себе…' : 'Tell us about yourself…'} rows={3} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input label={lang === 'ru' ? 'Страна' : 'Country'} value={profileForm.country} onChange={e => setProfileForm({ ...profileForm, country: e.target.value })} placeholder="Россия" />
-                    <Input label={lang === 'ru' ? 'Город' : 'City'} value={profileForm.city} onChange={e => setProfileForm({ ...profileForm, city: e.target.value })} placeholder="Москва" />
-                  </div>
-                  <Input label="GitHub URL" value={profileForm.github_url} onChange={e => setProfileForm({ ...profileForm, github_url: e.target.value })} placeholder="https://github.com/username" />
-                  <Input label={lang === 'ru' ? 'Личный сайт' : 'Website URL'} value={profileForm.website_url} onChange={e => setProfileForm({ ...profileForm, website_url: e.target.value })} placeholder="https://yoursite.com" />
-                  <Button onClick={() => profileMut.mutate()} loading={profileMut.isPending} icon={<Save size={16} />}>{t.common.save}</Button>
-                </CardBody>
-              </Card>
-            </motion.div>
-          )}
 
-          {/* Аккаунт */}
-          {tab === 'account' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-4">
-              <Card>
-                <CardHeader><h2 className="font-semibold text-app-1">{lang === 'ru' ? 'Данные аккаунта' : 'Account Information'}</h2></CardHeader>
-                <CardBody className="flex flex-col gap-4">
-                  <Input label={lang === 'ru' ? 'Логин' : 'Username'} value={accountForm.username} onChange={e => setAccountForm({ ...accountForm, username: e.target.value })} />
-                  <Input label="Email" type="email" value={accountForm.email} onChange={e => setAccountForm({ ...accountForm, email: e.target.value })} />
-                  <Button onClick={() => accountMut.mutate()} loading={accountMut.isPending} icon={<Save size={16} />}>{t.common.save}</Button>
-                </CardBody>
-              </Card>
-              <Card>
-                <CardHeader><h2 className="font-semibold text-red-600">{lang === 'ru' ? 'Опасная зона' : 'Danger Zone'}</h2></CardHeader>
-                <CardBody>
-                  <p className="text-app-2 text-sm mb-4">{lang === 'ru' ? 'После удаления аккаунта восстановить его невозможно.' : 'Once deleted, your account cannot be recovered.'}</p>
-                  <Button variant="danger">{lang === 'ru' ? 'Удалить аккаунт' : 'Delete Account'}</Button>
-                </CardBody>
-              </Card>
-            </motion.div>
-          )}
+                  <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }}>
+                    <Field label={lang==='ru'?'Имя':'First Name'} value={pf.first_name} onChange={v=>setPf({...pf,first_name:v})} placeholder="Иван"/>
+                    <Field label={lang==='ru'?'Фамилия':'Last Name'} value={pf.last_name} onChange={v=>setPf({...pf,last_name:v})} placeholder="Иванов"/>
+                  </div>
 
-          {/* Предпочтения — тема и язык */}
-          {tab === 'settings' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-4">
-              <Card>
-                <CardHeader><h2 className="font-semibold text-app-1">{t.settings.prefs}</h2></CardHeader>
-                <CardBody className="flex flex-col gap-5">
-                  {/* Тема */}
                   <div>
-                    <p className="text-sm font-medium text-app-2 mb-3">{t.settings.theme}</p>
-                    <div className="flex gap-3">
-                      {(['light', 'dark'] as const).map(th => (
-                        <button key={th} onClick={() => useThemeStore.getState().setTheme(th)}
-                          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-medium transition-all cursor-pointer ${
-                            theme === th
-                              ? 'border-purple-500 bg-[var(--accent-light)] text-[var(--accent-text)]'
-                              : 'border-[var(--border)] text-app-2 hover:border-[var(--border-2)]'
-                          }`}
-                        >
-                          {th === 'light' ? <Sun size={16} /> : <Moon size={16} />}
-                          {th === 'light' ? t.settings.light : t.settings.dark}
+                    <label style={labelSt}>{lang==='ru'?'О себе':'Bio'}</label>
+                    <textarea value={pf.bio} onChange={e=>setPf({...pf,bio:e.target.value})} rows={3} placeholder={lang==='ru'?'Расскажи о себе...':'Tell us about yourself...'} style={{...inputSt,resize:'none'}}
+                      onFocus={e=>e.target.style.borderColor='rgba(99,102,241,0.5)'} onBlur={e=>e.target.style.borderColor=inputBord}/>
+                  </div>
+
+                  <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }}>
+                    <Field label={lang==='ru'?'Страна':'Country'} value={pf.country} onChange={v=>setPf({...pf,country:v})} placeholder="Россия"/>
+                    <Field label={lang==='ru'?'Город':'City'} value={pf.city} onChange={v=>setPf({...pf,city:v})} placeholder="Москва"/>
+                  </div>
+
+                  <Field label="GitHub URL" value={pf.github_url} onChange={v=>setPf({...pf,github_url:v})} placeholder="https://github.com/username"/>
+                  <Field label={lang==='ru'?'Личный сайт':'Website'} value={pf.website_url} onChange={v=>setPf({...pf,website_url:v})} placeholder="https://yoursite.com"/>
+
+                  <SaveBtn onClick={()=>profileMut.mutate()} loading={profileMut.isPending}/>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Account tab */}
+            {tab==='account' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{ display:'flex',flexDirection:'column',gap:14 }}>
+                <div style={{ background:cardBg,border:`1px solid ${cardBord}`,borderRadius:20,overflow:'hidden',backdropFilter:'blur(24px)',boxShadow:dark?'none':'0 4px 24px rgba(0,0,0,0.06)' }}>
+                  <div style={{ height:2,background:'linear-gradient(90deg,#6366f1,#06b6d4,transparent)' }}/>
+                  <div style={{ padding:'24px',display:'flex',flexDirection:'column',gap:16 }}>
+                    <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                      <Shield size={16} color="#818cf8"/>
+                      <span style={{ fontSize:15,fontWeight:700,color:t1 }}>{lang==='ru'?'Данные аккаунта':'Account'}</span>
+                    </div>
+                    <Field label={lang==='ru'?'Логин':'Username'} value={af.username} onChange={v=>setAf({...af,username:v})}/>
+                    <Field label="Email" type="email" value={af.email} onChange={v=>setAf({...af,email:v})}/>
+                    <SaveBtn onClick={()=>accountMut.mutate()} loading={accountMut.isPending}/>
+                  </div>
+                </div>
+
+                <div style={{ background:cardBg,border:'1px solid rgba(239,68,68,0.2)',borderRadius:20,overflow:'hidden',backdropFilter:'blur(24px)' }}>
+                  <div style={{ height:2,background:'linear-gradient(90deg,#ef4444,transparent)' }}/>
+                  <div style={{ padding:'24px' }}>
+                    <p style={{ fontSize:14,fontWeight:700,color:'#f87171',margin:'0 0 8px' }}>{lang==='ru'?'Опасная зона':'Danger Zone'}</p>
+                    <p style={{ fontSize:13,color:t2,margin:'0 0 16px',lineHeight:1.5 }}>
+                      {lang==='ru'?'После удаления аккаунта восстановить его невозможно.':'Once deleted, your account cannot be recovered.'}
+                    </p>
+                    <button style={{ padding:'9px 18px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:11,color:'#f87171',fontSize:13,fontWeight:700,cursor:'pointer',transition:'background 0.15s' }}
+                      onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,0.18)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='rgba(239,68,68,0.1)'}>
+                      {lang==='ru'?'Удалить аккаунт':'Delete Account'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Preferences tab */}
+            {tab==='settings' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}}
+                style={{ background:cardBg,border:`1px solid ${cardBord}`,borderRadius:20,overflow:'hidden',backdropFilter:'blur(24px)',boxShadow:dark?'none':'0 4px 24px rgba(0,0,0,0.06)' }}>
+                <div style={{ height:2,background:'linear-gradient(90deg,#6366f1,#06b6d4,transparent)' }}/>
+                <div style={{ padding:'24px',display:'flex',flexDirection:'column',gap:24 }}>
+                  <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                    <SettingsIcon size={16} color="#818cf8"/>
+                    <span style={{ fontSize:15,fontWeight:700,color:t1 }}>{t.settings.prefs}</span>
+                  </div>
+
+                  {/* Theme */}
+                  <div>
+                    <p style={{ fontSize:11,fontWeight:800,color:t3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12 }}>{t.settings.theme}</p>
+                    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
+                      {([['light','Светлая',Sun],['dark','Тёмная',Moon]] as const).map(([th,label,Icon])=>(
+                        <button key={th} onClick={()=>useThemeStore.getState().setTheme(th)}
+                          style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'14px',borderRadius:14,border:`2px solid ${theme===th?'#6366f1':chipBord}`,background:theme===th?'rgba(99,102,241,0.12)':chipBg,color:theme===th?'#818cf8':t2,fontSize:14,fontWeight:theme===th?700:500,cursor:'pointer',transition:'all 0.15s' }}>
+                          <Icon size={16}/> {label}
+                          {theme===th && <Check size={14} style={{ marginLeft:'auto' }}/>}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Язык */}
+                  {/* Language */}
                   <div>
-                    <p className="text-sm font-medium text-app-2 mb-3">{t.settings.language}</p>
-                    <div className="flex gap-3">
-                      {(['ru', 'en'] as const).map(l => (
-                        <button key={l} onClick={() => useThemeStore.getState().setLang(l)}
-                          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-medium transition-all cursor-pointer ${
-                            lang === l
-                              ? 'border-purple-500 bg-[var(--accent-light)] text-[var(--accent-text)]'
-                              : 'border-[var(--border)] text-app-2 hover:border-[var(--border-2)]'
-                          }`}
-                        >
-                          <Globe size={16} />
-                          {l === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English'}
+                    <p style={{ fontSize:11,fontWeight:800,color:t3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12 }}>{t.settings.language}</p>
+                    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
+                      {([['ru','🇷🇺 Русский'],['en','🇬🇧 English']] as const).map(([l,label])=>(
+                        <button key={l} onClick={()=>useThemeStore.getState().setLang(l)}
+                          style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'14px',borderRadius:14,border:`2px solid ${lang===l?'#6366f1':chipBord}`,background:lang===l?'rgba(99,102,241,0.12)':chipBg,color:lang===l?'#818cf8':t2,fontSize:14,fontWeight:lang===l?700:500,cursor:'pointer',transition:'all 0.15s' }}>
+                          {label}
+                          {lang===l && <Check size={14} style={{ marginLeft:'auto' }}/>}
                         </button>
                       ))}
                     </div>
                   </div>
-                </CardBody>
-              </Card>
-            </motion.div>
-          )}
+                </div>
+              </motion.div>
+            )}
 
-          {/* Уведомления */}
-          {tab === 'notifs' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <Card>
-                <CardHeader>
-                  <h2 className="font-semibold text-app-1 flex items-center gap-2"><Bell size={16} /> {t.settings.notifs}</h2>
-                </CardHeader>
-                <CardBody className="flex flex-col gap-4">
-                  {[{ key: 'email_notifications', label: lang === 'ru' ? 'Email уведомления' : 'Email Notifications', desc: lang === 'ru' ? 'Получать напоминания о контестах и вызовах на дуэль' : 'Receive contest reminders and duel challenges' }].map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-center justify-between py-2">
-                      <div>
-                        <p className="text-sm font-medium text-app-1">{label}</p>
-                        <p className="text-xs text-app-3">{desc}</p>
+            {/* Notifications tab */}
+            {tab==='notifs' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}}
+                style={{ background:cardBg,border:`1px solid ${cardBord}`,borderRadius:20,overflow:'hidden',backdropFilter:'blur(24px)',boxShadow:dark?'none':'0 4px 24px rgba(0,0,0,0.06)' }}>
+                <div style={{ height:2,background:'linear-gradient(90deg,#6366f1,#06b6d4,transparent)' }}/>
+                <div style={{ padding:'24px' }}>
+                  <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:20 }}>
+                    <Bell size={16} color="#818cf8"/>
+                    <span style={{ fontSize:15,fontWeight:700,color:t1 }}>{t.settings.notifs}</span>
+                  </div>
+                  {[
+                    { key:'email_notifications', label:lang==='ru'?'Email уведомления':'Email Notifications', desc:lang==='ru'?'Напоминания о контестах и вызовы на дуэль':'Contest reminders and duel challenges' },
+                  ].map(({key,label,desc})=>{
+                    const on = (settingsData as Record<string,boolean>|undefined)?.[key];
+                    return (
+                      <div key={key} style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 0',borderBottom:`1px solid ${cardBord}` }}>
+                        <div>
+                          <p style={{ fontSize:14,fontWeight:600,color:t1,margin:'0 0 3px' }}>{label}</p>
+                          <p style={{ fontSize:12,color:t3,margin:0 }}>{desc}</p>
+                        </div>
+                        <button onClick={()=>settingsMut.mutate({[key]:!on})}
+                          style={{ position:'relative',width:46,height:26,borderRadius:13,background:on?'#6366f1':'rgba(255,255,255,0.1)',border:`1px solid ${on?'transparent':chipBord}`,cursor:'pointer',flexShrink:0,transition:'background 0.2s' }}>
+                          <span style={{ position:'absolute',top:2,left:on?22:2,width:20,height:20,borderRadius:'50%',background:'#fff',transition:'left 0.2s',boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }}/>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => settingsMut.mutate({ [key]: !(settings as Record<string, boolean> | undefined)?.[key] })}
-                        className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer ${(settings as Record<string, boolean> | undefined)?.[key] ? 'bg-purple-600' : 'bg-[var(--border-2)]'}`}
-                      >
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${(settings as Record<string, boolean> | undefined)?.[key] ? 'translate-x-5' : ''}`} />
-                      </button>
-                    </div>
-                  ))}
-                </CardBody>
-              </Card>
-            </motion.div>
-          )}
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
     </div>

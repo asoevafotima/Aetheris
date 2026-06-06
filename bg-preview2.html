@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Background Variants 2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Inter,sans-serif;background:#000;color:#fff;overflow:hidden}
+.bar{position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(0,0,0,0.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.08);padding:10px 24px;display:flex;align-items:center;gap:8px}
+.bl{font-size:11px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:.1em;text-transform:uppercase;margin-right:6px}
+.btn{padding:7px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;font-size:12px;font-family:inherit;font-weight:600;transition:all .2s}
+.btn:hover{color:#fff;border-color:rgba(255,255,255,0.3)}
+.btn.on{background:#fff;color:#000;border-color:#fff}
+.pg{display:none;position:fixed;inset:0}
+.pg.on{display:block}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+.ui{position:absolute;bottom:60px;left:60px;z-index:2;pointer-events:none}
+.tag{font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:.18em;text-transform:uppercase;font-family:monospace;margin-bottom:10px}
+.title{font-size:52px;font-weight:900;letter-spacing:-.045em;line-height:1.05}
+.sub{font-size:14px;color:rgba(255,255,255,0.32);margin-top:10px;max-width:480px;line-height:1.65}
+.badge{display:inline-flex;align-items:center;gap:6px;margin-top:16px;padding:6px 16px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.06em}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="bl">Новые варианты</span>
+  <button class="btn on" onclick="show(1)">① Пульс сетки</button>
+  <button class="btn"    onclick="show(2)">② Поток частиц</button>
+  <button class="btn"    onclick="show(3)">③ Hexagon</button>
+  <button class="btn"    onclick="show(4)">④ Гиперпространство</button>
+</div>
+
+<!-- ══════ 1: GRID PULSE ══════ -->
+<div id="p1" class="pg on">
+  <canvas id="c1"></canvas>
+  <div class="ui">
+    <div class="tag">Вариант 1 — Пульс сетки</div>
+    <div class="title">Точки.<br><span style="background:linear-gradient(135deg,#6366f1,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Волны.</span><br>Связи.</div>
+    <div class="sub">Тёмная сетка точек с пульсирующими волнами от случайных центров. Линии между соседними точками реагируют на курсор.</div>
+    <div class="badge" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8">◉ Grid · Pulse · Interactive</div>
+  </div>
+</div>
+
+<!-- ══════ 2: PARTICLE FLOW ══════ -->
+<div id="p2" class="pg">
+  <canvas id="c2"></canvas>
+  <div class="ui">
+    <div class="tag">Вариант 2 — Поток частиц</div>
+    <div class="title">Тысячи<br><span style="background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent">частиц</span><br>в потоке.</div>
+    <div class="sub">Частицы следуют по векторному полю. Создают плавные струи и завихрения. Как дым или вода в невесомости.</div>
+    <div class="badge" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fbbf24">∿ Flow · Fluid · Organic</div>
+  </div>
+</div>
+
+<!-- ══════ 3: HEXAGON ══════ -->
+<div id="p3" class="pg">
+  <canvas id="c3"></canvas>
+  <div class="ui">
+    <div class="tag">Вариант 3 — Hexagon</div>
+    <div class="title">Шесть<br><span style="background:linear-gradient(135deg,#10b981,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">граней</span><br>каждой ячейки.</div>
+    <div class="sub">Шестиугольная сетка, ячейки загораются волнами. Технологичный вид, как в sci-fi интерфейсах.</div>
+    <div class="badge" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399">⬡ Hex · Sci-Fi · Tech</div>
+  </div>
+</div>
+
+<!-- ══════ 4: HYPERSPACE ══════ -->
+<div id="p4" class="pg">
+  <canvas id="c4"></canvas>
+  <div class="ui">
+    <div class="tag">Вариант 4 — Гиперпространство</div>
+    <div class="title">Скорость<br><span style="background:linear-gradient(135deg,#fff,#a5b4fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent">света.</span></div>
+    <div class="sub">Звёзды вытягиваются в линии при движении. Эффект прыжка в гиперпространство. Энергично и стремительно.</div>
+    <div class="badge" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#e2e8f0">→ Warp · Speed · Cinematic</div>
+  </div>
+</div>
+
+<script>
+function show(n) {
+  document.querySelectorAll('.pg').forEach((p,i) => p.classList.toggle('on', i+1===n));
+  document.querySelectorAll('.btn').forEach((b,i) => b.classList.toggle('on', i+1===n));
+}
+
+// ─────────────────────────────────────────────
+// 1 — GRID PULSE
+// ─────────────────────────────────────────────
+(function(){
+  const cv = document.getElementById('c1');
+  const cx = cv.getContext('2d');
+  let W, H, pts = [], waves = [];
+  let mx = 0.5, my = 0.5;
+  const SPACING = 52;
+
+  window.addEventListener('mousemove', e => { mx = e.clientX/window.innerWidth; my = e.clientY/window.innerHeight; });
+
+  function init() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    pts = [];
+    const cols = Math.ceil(W/SPACING)+2;
+    const rows = Math.ceil(H/SPACING)+2;
+    for (let r = -1; r <= rows; r++) {
+      for (let c = -1; c <= cols; c++) {
+        pts.push({
+          bx: c*SPACING, by: r*SPACING,
+          x: c*SPACING, y: r*SPACING,
+          brightness: 0,
+        });
+      }
+    }
+  }
+
+  function spawnWave() {
+    if (waves.length > 5) return;
+    waves.push({
+      x: Math.random()*W, y: Math.random()*H,
+      r: 0, speed: 1.8 + Math.random()*1.2,
+      life: 1, maxR: 300 + Math.random()*250,
+      hue: [220,190,160,260][Math.floor(Math.random()*4)],
+    });
+  }
+
+  function frame() {
+    requestAnimationFrame(frame);
+    if (!document.getElementById('p1').classList.contains('on')) return;
+
+    cx.fillStyle = '#03060e';
+    cx.fillRect(0,0,W,H);
+
+    // mouse influence
+    const mouseX = mx * W, mouseY = my * H;
+
+    // update waves
+    if (Math.random() < 0.025) spawnWave();
+    for (const w of waves) {
+      w.r += w.speed;
+      w.life = 1 - w.r / w.maxR;
+    }
+    waves.splice(0, waves.length, ...waves.filter(w => w.life > 0));
+
+    // draw edges between nearby pts
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      // mouse repulsion
+      const mdx = p.bx - mouseX, mdy = p.bx - mouseY;
+      const md = Math.sqrt(mdx*mdx+mdy*mdy);
+      const repel = Math.max(0, 1 - md/150) * 8;
+
+      // wave brightness
+      let bright = 0;
+      for (const w of waves) {
+        const dx = p.bx - w.x, dy = p.by - w.y;
+        const d = Math.sqrt(dx*dx+dy*dy);
+        const diff = Math.abs(d - w.r);
+        if (diff < 30) bright = Math.max(bright, (1-diff/30) * w.life * 0.85);
+      }
+      p.brightness += (bright - p.brightness) * 0.12;
+
+      // draw dot
+      const alpha = 0.12 + p.brightness * 0.75;
+      const r = 1.5 + p.brightness * 2.5;
+      if (p.brightness > 0.05) {
+        const g = cx.createRadialGradient(p.bx,p.by,0,p.bx,p.by,r*6);
+        g.addColorStop(0, `rgba(96,165,250,${(alpha*0.4).toFixed(3)})`);
+        g.addColorStop(1, 'rgba(96,165,250,0)');
+        cx.fillStyle = g; cx.beginPath(); cx.arc(p.bx,p.by,r*6,0,Math.PI*2); cx.fill();
+      }
+      cx.fillStyle = `rgba(96,165,250,${alpha.toFixed(3)})`;
+      cx.beginPath(); cx.arc(p.bx, p.by, r, 0, Math.PI*2); cx.fill();
+
+      // edges to right and bottom neighbor
+      if (i + 1 < pts.length && pts[i+1].by === p.by) {
+        const nb = pts[i+1];
+        const edgeAlpha = (p.brightness + nb.brightness) * 0.5 * 0.5;
+        if (edgeAlpha > 0.015) {
+          cx.strokeStyle = `rgba(99,102,241,${edgeAlpha.toFixed(3)})`;
+          cx.lineWidth = 0.8;
+          cx.beginPath(); cx.moveTo(p.bx, p.by); cx.lineTo(nb.bx, nb.by); cx.stroke();
+        }
+      }
+    }
+
+    // mouse glow
+    const mg = cx.createRadialGradient(mouseX,mouseY,0,mouseX,mouseY,120);
+    mg.addColorStop(0,'rgba(99,102,241,0.08)');
+    mg.addColorStop(1,'rgba(99,102,241,0)');
+    cx.fillStyle=mg; cx.fillRect(0,0,W,H);
+  }
+
+  init();
+  window.addEventListener('resize', init);
+  frame();
+})();
+
+
+// ─────────────────────────────────────────────
+// 2 — PARTICLE FLOW
+// ─────────────────────────────────────────────
+(function(){
+  const cv = document.getElementById('c2');
+  const cx = cv.getContext('2d');
+  let W, H, particles = [];
+  const N = 1800;
+  let t = 0;
+
+  function noise2(x, y, z) {
+    return Math.sin(x*1.3+z) * Math.cos(y*0.9+z*1.2) +
+           Math.sin(x*0.7-z*0.8) * Math.sin(y*1.6+z*0.5) * 0.5;
+  }
+
+  function init() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    particles = Array.from({length: N}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      age: Math.floor(Math.random()*200),
+      maxAge: 150 + Math.floor(Math.random()*200),
+      hue: 20 + Math.random()*40, // orange-red spectrum
+      speed: 0.6 + Math.random()*0.9,
+    }));
+    cx.fillStyle='#020508';
+    cx.fillRect(0,0,W,H);
+  }
+
+  function frame() {
+    requestAnimationFrame(frame);
+    if (!document.getElementById('p2').classList.contains('on')) return;
+    t += 0.004;
+
+    // fade
+    cx.fillStyle = 'rgba(2,5,8,0.05)';
+    cx.fillRect(0,0,W,H);
+
+    for (const p of particles) {
+      // vector field
+      const nx = p.x/W*3, ny = p.y/H*3;
+      const angle = noise2(nx, ny, t) * Math.PI * 2.5;
+      p.x += Math.cos(angle) * p.speed;
+      p.y += Math.sin(angle) * p.speed;
+      p.age++;
+
+      const life = 1 - p.age / p.maxAge;
+      const alpha = life * 0.55;
+
+      if (alpha > 0.02) {
+        // color shifts from amber → orange → red as particle ages
+        const h = p.hue + (1-life)*20;
+        const s = 85;
+        const l = 55 + life*15;
+        cx.fillStyle = `hsla(${h},${s}%,${l}%,${alpha.toFixed(3)})`;
+        cx.beginPath();
+        cx.arc(p.x, p.y, 1.2 + life*0.8, 0, Math.PI*2);
+        cx.fill();
+      }
+
+      // reset if old or out of bounds
+      if (p.age >= p.maxAge || p.x < 0 || p.x > W || p.y < 0 || p.y > H) {
+        p.x = Math.random()*W;
+        p.y = Math.random()*H;
+        p.age = 0;
+        p.maxAge = 150 + Math.floor(Math.random()*200);
+        p.hue = 20 + Math.random()*40;
+        p.speed = 0.6 + Math.random()*0.9;
+      }
+    }
+
+    // subtle center glow
+    const cg = cx.createRadialGradient(W*.5,H*.45,0,W*.5,H*.45,W*.6);
+    cg.addColorStop(0,'rgba(245,158,11,0.04)');
+    cg.addColorStop(1,'rgba(245,158,11,0)');
+    cx.fillStyle=cg; cx.fillRect(0,0,W,H);
+  }
+
+  init();
+  window.addEventListener('resize', init);
+  frame();
+})();
+
+
+// ─────────────────────────────────────────────
+// 3 — HEXAGON GRID
+// ─────────────────────────────────────────────
+(function(){
+  const cv = document.getElementById('c3');
+  const cx = cv.getContext('2d');
+  let W, H, hexes = [], waves = [];
+  const SIZE = 38;
+  let mx = 0.5, my = 0.5;
+  window.addEventListener('mousemove', e => { mx=e.clientX/window.innerWidth; my=e.clientY/window.innerHeight; });
+
+  function hexCorner(cx,cy,r,i) {
+    const angle = Math.PI/180*(60*i-30);
+    return [cx+r*Math.cos(angle), cy+r*Math.sin(angle)];
+  }
+
+  function drawHex(x,y,r,fillAlpha,strokeAlpha,color) {
+    cx.beginPath();
+    for (let i=0;i<6;i++) {
+      const [px,py] = hexCorner(x,y,r,i);
+      i===0 ? cx.moveTo(px,py) : cx.lineTo(px,py);
+    }
+    cx.closePath();
+    if (fillAlpha > 0.005) { cx.fillStyle=`rgba(${color},${fillAlpha.toFixed(3)})`; cx.fill(); }
+    if (strokeAlpha > 0.005) { cx.strokeStyle=`rgba(${color},${strokeAlpha.toFixed(3)})`; cx.lineWidth=0.7; cx.stroke(); }
+  }
+
+  function init() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    hexes = [];
+    const w = SIZE*2, h = Math.sqrt(3)*SIZE;
+    const cols = Math.ceil(W/(w*0.75))+3;
+    const rows = Math.ceil(H/h)+3;
+    for (let r=-1; r<rows; r++) {
+      for (let c=-1; c<cols; c++) {
+        const x = c*w*0.75;
+        const y = r*h + (c%2)*h*0.5;
+        hexes.push({ x, y, brightness:0, color: Math.floor(Math.random()*3) });
+      }
+    }
+    waves = [];
+  }
+
+  const COLORS = ['16,185,129','6,182,212','99,102,241'];
+
+  function spawnWave() {
+    if (waves.length > 4) return;
+    const ci = Math.floor(Math.random()*3);
+    waves.push({ x:Math.random()*W, y:Math.random()*H, r:0, speed:2.5+Math.random()*1.5, maxR:400+Math.random()*200, life:1, ci });
+  }
+
+  function frame() {
+    requestAnimationFrame(frame);
+    if (!document.getElementById('p3').classList.contains('on')) return;
+
+    cx.fillStyle = '#020c0a';
+    cx.fillRect(0,0,W,H);
+
+    if (Math.random()<0.02) spawnWave();
+    for (const w of waves) { w.r+=w.speed; w.life=1-w.r/w.maxR; }
+    waves.splice(0,waves.length,...waves.filter(w=>w.life>0));
+
+    const mouseX=mx*W, mouseY=my*H;
+
+    for (const h of hexes) {
+      let bright=0, ci=h.color;
+      // wave influence
+      for (const w of waves) {
+        const dx=h.x-w.x,dy=h.y-w.y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        const diff=Math.abs(d-w.r);
+        if (diff<45) { const b=(1-diff/45)*w.life*0.9; if(b>bright){bright=b;ci=w.ci;} }
+      }
+      // mouse glow
+      const mdx=h.x-mouseX,mdy=h.y-mouseY;
+      const md=Math.sqrt(mdx*mdx+mdy*mdy);
+      if (md<120) { const b=(1-md/120)*0.6; if(b>bright){bright=b;} }
+
+      h.brightness += (bright - h.brightness)*0.1;
+      const b=h.brightness;
+      drawHex(h.x, h.y, SIZE-1.5, b*0.12, 0.05+b*0.35, COLORS[ci]);
+    }
+  }
+
+  init();
+  window.addEventListener('resize', init);
+  frame();
+})();
+
+
+// ─────────────────────────────────────────────
+// 4 — HYPERSPACE / WARP
+// ─────────────────────────────────────────────
+(function(){
+  const cv = document.getElementById('c4');
+  const cx = cv.getContext('2d');
+  let W, H, stars = [];
+  const N = 500;
+  let speed = 3;
+
+  function init() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    stars = Array.from({length: N}, () => ({
+      x: (Math.random()-0.5)*W*2,
+      y: (Math.random()-0.5)*H*2,
+      z: Math.random()*W,
+      pz: 0,
+      hue: Math.random()>0.7 ? 200+Math.random()*40 : 0, // mostly white, some blue
+    }));
+    cx.fillStyle='#02030a';
+    cx.fillRect(0,0,W,H);
+  }
+
+  // mouse slightly shifts direction
+  let mx=0.5, my=0.5;
+  window.addEventListener('mousemove', e => { mx=e.clientX/window.innerWidth; my=e.clientY/window.innerHeight; });
+
+  function frame() {
+    requestAnimationFrame(frame);
+    if (!document.getElementById('p4').classList.contains('on')) return;
+
+    // motion blur
+    cx.fillStyle = 'rgba(2,3,10,0.2)';
+    cx.fillRect(0,0,W,H);
+
+    const cx2 = W/2 + (mx-0.5)*30;
+    const cy2 = H/2 + (my-0.5)*20;
+
+    for (const s of stars) {
+      s.pz = s.z;
+      s.z -= speed;
+
+      if (s.z <= 0) {
+        s.x = (Math.random()-0.5)*W*2;
+        s.y = (Math.random()-0.5)*H*2;
+        s.z = W;
+        s.pz = W;
+        continue;
+      }
+
+      // project
+      const sx = (s.x/s.z)*W + cx2;
+      const sy = (s.y/s.z)*H + cy2;
+      const px = (s.x/s.pz)*W + cx2;
+      const py = (s.y/s.pz)*H + cy2;
+
+      if (sx<-20||sx>W+20||sy<-20||sy>H+20) continue;
+
+      const size = (1 - s.z/W) * 3.5;
+      const alpha = (1 - s.z/W);
+
+      // streak
+      const len = Math.sqrt((sx-px)*(sx-px)+(sy-py)*(sy-py));
+      if (len > 0.5) {
+        const grad = cx.createLinearGradient(px,py,sx,sy);
+        const col = s.hue > 0 ? `hsl(${s.hue},80%,80%)` : '#ffffff';
+        grad.addColorStop(0,'rgba(255,255,255,0)');
+        grad.addColorStop(1, col.replace(')',`,${alpha.toFixed(2)})`).replace('hsl','hsla'));
+        cx.strokeStyle=grad;
+        cx.lineWidth = size*0.7;
+        cx.beginPath(); cx.moveTo(px,py); cx.lineTo(sx,sy); cx.stroke();
+      }
+
+      // dot at head
+      cx.fillStyle = s.hue > 0
+        ? `hsla(${s.hue},80%,85%,${alpha.toFixed(2)})`
+        : `rgba(255,255,255,${alpha.toFixed(2)})`;
+      cx.beginPath(); cx.arc(sx,sy,size*0.6,0,Math.PI*2); cx.fill();
+    }
+
+    // center core glow
+    const cg = cx.createRadialGradient(cx2,cy2,0,cx2,cy2,200);
+    cg.addColorStop(0,'rgba(140,160,255,0.06)');
+    cg.addColorStop(1,'rgba(140,160,255,0)');
+    cx.fillStyle=cg; cx.fillRect(0,0,W,H);
+
+    speed = 2 + (mx-0.5)*4 + 2; // speed up with mouse right
+  }
+
+  init();
+  window.addEventListener('resize', init);
+  frame();
+})();
+</script>
+</body>
+</html>
