@@ -20,6 +20,12 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
 
+class UserRoleUpdate(BaseModel):
+    role: UserRole
+
+class UserActiveUpdate(BaseModel):
+    is_active: bool
+
 class UserResponse(BaseModel):
     id: UUID
     username: str

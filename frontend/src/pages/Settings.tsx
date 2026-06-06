@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, User, Bell, Shield, Save, Camera, Sun, Moon, Globe, Check } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, Shield, Save, Camera, Sun, Moon, Check } from 'lucide-react';
 import { profilesApi, settingsApi, usersApi } from '../api/endpoints';
 import { useAuthStore }  from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { useT }          from '../i18n';
+import { useT, LANGUAGES } from '../i18n';
 import { BackgroundGraph } from '../components/BackgroundGraph';
 
 export function Settings() {
@@ -16,6 +16,7 @@ export function Settings() {
   const dark = theme === 'dark';
   const t    = useT();
   const qc   = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const pageBg    = dark ? '#04080f'                 : '#f1f5f9';
   const t1        = dark ? 'rgba(255,255,255,0.9)'   : 'rgba(0,0,0,0.88)';
@@ -46,6 +47,10 @@ export function Settings() {
   const profileMut  = useMutation({ mutationFn:()=>profilesApi.updateMe(pf),   onSuccess:()=>{qc.invalidateQueries({queryKey:['profile','me']});showSaved();} });
   const accountMut  = useMutation({ mutationFn:()=>usersApi.updateMe({username:af.username,email:af.email}), onSuccess:()=>{fetchMe();showSaved();} });
   const settingsMut = useMutation({ mutationFn:(data:object)=>settingsApi.update(data), onSuccess:()=>showSaved() });
+  const avatarMut   = useMutation({
+    mutationFn:(file:File)=>profilesApi.uploadAvatar(file),
+    onSuccess:()=>{ qc.invalidateQueries({queryKey:['profile','me']}); showSaved(); },
+  });
 
   const TABS = [
     { id:'profile',  Icon:User,         label:t.settings.profile  },
@@ -66,9 +71,13 @@ export function Settings() {
     <button onClick={onClick} disabled={loading}
       style={{ display:'flex',alignItems:'center',gap:8,padding:'11px 22px',background:'linear-gradient(135deg,#6366f1,#4f46e5)',boxShadow:'0 0 22px rgba(99,102,241,0.35)',border:'none',borderRadius:12,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',transition:'transform 0.15s' }}
       onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
-      <Save size={14}/> {loading?'Сохранение...':t.common.save}
+      <Save size={14}/> {loading ? t.common.loading : t.common.save}
     </button>
   );
+
+  const avatarUrl = profile?.avatar_url
+    ? (profile.avatar_url.startsWith('http') ? profile.avatar_url : `http://localhost:8000${profile.avatar_url}`)
+    : null;
 
   return (
     <div style={{ position:'relative',minHeight:'calc(100vh - 56px)',background:pageBg }}>
@@ -118,32 +127,38 @@ export function Settings() {
 
                   {/* Avatar */}
                   <div style={{ display:'flex',alignItems:'center',gap:16 }}>
-                    <div style={{ width:72,height:72,borderRadius:16,background:'linear-gradient(135deg,#6366f1,#06b6d4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:900,color:'#fff',boxShadow:'0 0 24px rgba(99,102,241,0.3)' }}>
-                      {user?.username[0].toUpperCase()}
+                    <div style={{ width:72,height:72,borderRadius:16,overflow:'hidden',flexShrink:0,background:'linear-gradient(135deg,#6366f1,#06b6d4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:900,color:'#fff',boxShadow:'0 0 24px rgba(99,102,241,0.3)' }}>
+                      {avatarUrl
+                        ? <img src={avatarUrl} alt="avatar" style={{ width:'100%',height:'100%',objectFit:'cover' }}/>
+                        : (user?.username[0].toUpperCase())
+                      }
                     </div>
-                    <button style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 16px',background:chipBg,border:`1px solid ${chipBord}`,borderRadius:11,color:t2,fontSize:13,fontWeight:600,cursor:'pointer' }}>
-                      <Camera size={14}/> Сменить фото
+                    <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }}
+                      onChange={e=>{ const f=e.target.files?.[0]; if(f) avatarMut.mutate(f); e.target.value=''; }}/>
+                    <button onClick={()=>fileInputRef.current?.click()} disabled={avatarMut.isPending}
+                      style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 16px',background:chipBg,border:`1px solid ${chipBord}`,borderRadius:11,color:t2,fontSize:13,fontWeight:600,cursor:'pointer' }}>
+                      <Camera size={14}/> {avatarMut.isPending ? t.common.loading : t.settings.changePhoto}
                     </button>
                   </div>
 
                   <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }}>
-                    <Field label={lang==='ru'?'Имя':'First Name'} value={pf.first_name} onChange={v=>setPf({...pf,first_name:v})} placeholder="Иван"/>
-                    <Field label={lang==='ru'?'Фамилия':'Last Name'} value={pf.last_name} onChange={v=>setPf({...pf,last_name:v})} placeholder="Иванов"/>
+                    <Field label={t.settings.firstName} value={pf.first_name} onChange={v=>setPf({...pf,first_name:v})} placeholder="Иван"/>
+                    <Field label={t.settings.lastName}  value={pf.last_name}  onChange={v=>setPf({...pf,last_name:v})}  placeholder="Иванов"/>
                   </div>
 
                   <div>
-                    <label style={labelSt}>{lang==='ru'?'О себе':'Bio'}</label>
-                    <textarea value={pf.bio} onChange={e=>setPf({...pf,bio:e.target.value})} rows={3} placeholder={lang==='ru'?'Расскажи о себе...':'Tell us about yourself...'} style={{...inputSt,resize:'none'}}
+                    <label style={labelSt}>{t.settings.bio}</label>
+                    <textarea value={pf.bio} onChange={e=>setPf({...pf,bio:e.target.value})} rows={3} placeholder="..." style={{...inputSt,resize:'none'}}
                       onFocus={e=>e.target.style.borderColor='rgba(99,102,241,0.5)'} onBlur={e=>e.target.style.borderColor=inputBord}/>
                   </div>
 
                   <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }}>
-                    <Field label={lang==='ru'?'Страна':'Country'} value={pf.country} onChange={v=>setPf({...pf,country:v})} placeholder="Россия"/>
-                    <Field label={lang==='ru'?'Город':'City'} value={pf.city} onChange={v=>setPf({...pf,city:v})} placeholder="Москва"/>
+                    <Field label={t.settings.country} value={pf.country} onChange={v=>setPf({...pf,country:v})} placeholder="Russia"/>
+                    <Field label={t.settings.city}    value={pf.city}    onChange={v=>setPf({...pf,city:v})}    placeholder="Moscow"/>
                   </div>
 
                   <Field label="GitHub URL" value={pf.github_url} onChange={v=>setPf({...pf,github_url:v})} placeholder="https://github.com/username"/>
-                  <Field label={lang==='ru'?'Личный сайт':'Website'} value={pf.website_url} onChange={v=>setPf({...pf,website_url:v})} placeholder="https://yoursite.com"/>
+                  <Field label={t.settings.website}  value={pf.website_url} onChange={v=>setPf({...pf,website_url:v})} placeholder="https://yoursite.com"/>
 
                   <SaveBtn onClick={()=>profileMut.mutate()} loading={profileMut.isPending}/>
                 </div>
@@ -158,10 +173,10 @@ export function Settings() {
                   <div style={{ padding:'24px',display:'flex',flexDirection:'column',gap:16 }}>
                     <div style={{ display:'flex',alignItems:'center',gap:10 }}>
                       <Shield size={16} color="#818cf8"/>
-                      <span style={{ fontSize:15,fontWeight:700,color:t1 }}>{lang==='ru'?'Данные аккаунта':'Account'}</span>
+                      <span style={{ fontSize:15,fontWeight:700,color:t1 }}>{t.settings.accountData}</span>
                     </div>
-                    <Field label={lang==='ru'?'Логин':'Username'} value={af.username} onChange={v=>setAf({...af,username:v})}/>
-                    <Field label="Email" type="email" value={af.email} onChange={v=>setAf({...af,email:v})}/>
+                    <Field label={t.settings.usernameLabel} value={af.username} onChange={v=>setAf({...af,username:v})}/>
+                    <Field label={t.settings.emailLabel}    type="email" value={af.email} onChange={v=>setAf({...af,email:v})}/>
                     <SaveBtn onClick={()=>accountMut.mutate()} loading={accountMut.isPending}/>
                   </div>
                 </div>
@@ -169,14 +184,12 @@ export function Settings() {
                 <div style={{ background:cardBg,border:'1px solid rgba(239,68,68,0.2)',borderRadius:20,overflow:'hidden',backdropFilter:'blur(24px)' }}>
                   <div style={{ height:2,background:'linear-gradient(90deg,#ef4444,transparent)' }}/>
                   <div style={{ padding:'24px' }}>
-                    <p style={{ fontSize:14,fontWeight:700,color:'#f87171',margin:'0 0 8px' }}>{lang==='ru'?'Опасная зона':'Danger Zone'}</p>
-                    <p style={{ fontSize:13,color:t2,margin:'0 0 16px',lineHeight:1.5 }}>
-                      {lang==='ru'?'После удаления аккаунта восстановить его невозможно.':'Once deleted, your account cannot be recovered.'}
-                    </p>
+                    <p style={{ fontSize:14,fontWeight:700,color:'#f87171',margin:'0 0 8px' }}>{t.settings.dangerZone}</p>
+                    <p style={{ fontSize:13,color:t2,margin:'0 0 16px',lineHeight:1.5 }}>{t.settings.dangerDesc}</p>
                     <button style={{ padding:'9px 18px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:11,color:'#f87171',fontSize:13,fontWeight:700,cursor:'pointer',transition:'background 0.15s' }}
                       onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,0.18)'}
                       onMouseLeave={e=>e.currentTarget.style.background='rgba(239,68,68,0.1)'}>
-                      {lang==='ru'?'Удалить аккаунт':'Delete Account'}
+                      {t.settings.deleteAccount}
                     </button>
                   </div>
                 </div>
@@ -198,7 +211,7 @@ export function Settings() {
                   <div>
                     <p style={{ fontSize:11,fontWeight:800,color:t3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12 }}>{t.settings.theme}</p>
                     <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
-                      {([['light','Светлая',Sun],['dark','Тёмная',Moon]] as const).map(([th,label,Icon])=>(
+                      {([['light', t.settings.light, Sun],['dark', t.settings.dark, Moon]] as const).map(([th,label,Icon])=>(
                         <button key={th} onClick={()=>useThemeStore.getState().setTheme(th)}
                           style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'14px',borderRadius:14,border:`2px solid ${theme===th?'#6366f1':chipBord}`,background:theme===th?'rgba(99,102,241,0.12)':chipBg,color:theme===th?'#818cf8':t2,fontSize:14,fontWeight:theme===th?700:500,cursor:'pointer',transition:'all 0.15s' }}>
                           <Icon size={16}/> {label}
@@ -208,15 +221,16 @@ export function Settings() {
                     </div>
                   </div>
 
-                  {/* Language */}
+                  {/* Language — 20 languages grid */}
                   <div>
                     <p style={{ fontSize:11,fontWeight:800,color:t3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12 }}>{t.settings.language}</p>
-                    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
-                      {([['ru','🇷🇺 Русский'],['en','🇬🇧 English']] as const).map(([l,label])=>(
-                        <button key={l} onClick={()=>useThemeStore.getState().setLang(l)}
-                          style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'14px',borderRadius:14,border:`2px solid ${lang===l?'#6366f1':chipBord}`,background:lang===l?'rgba(99,102,241,0.12)':chipBg,color:lang===l?'#818cf8':t2,fontSize:14,fontWeight:lang===l?700:500,cursor:'pointer',transition:'all 0.15s' }}>
-                          {label}
-                          {lang===l && <Check size={14} style={{ marginLeft:'auto' }}/>}
+                    <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8 }}>
+                      {LANGUAGES.map(({ code, flag, name }) => (
+                        <button key={code} onClick={()=>useThemeStore.getState().setLang(code)}
+                          style={{ display:'flex',alignItems:'center',gap:7,padding:'10px 10px',borderRadius:12,border:`2px solid ${lang===code?'#6366f1':chipBord}`,background:lang===code?'rgba(99,102,241,0.12)':chipBg,color:lang===code?'#818cf8':t2,fontSize:12,fontWeight:lang===code?700:500,cursor:'pointer',transition:'all 0.15s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>
+                          <span style={{ fontSize:16,flexShrink:0 }}>{flag}</span>
+                          <span style={{ overflow:'hidden',textOverflow:'ellipsis' }}>{name}</span>
+                          {lang===code && <Check size={12} style={{ marginLeft:'auto',flexShrink:0 }}/>}
                         </button>
                       ))}
                     </div>
@@ -236,7 +250,7 @@ export function Settings() {
                     <span style={{ fontSize:15,fontWeight:700,color:t1 }}>{t.settings.notifs}</span>
                   </div>
                   {[
-                    { key:'email_notifications', label:lang==='ru'?'Email уведомления':'Email Notifications', desc:lang==='ru'?'Напоминания о контестах и вызовы на дуэль':'Contest reminders and duel challenges' },
+                    { key:'email_notifications', label:t.settings.emailNotifs, desc:t.settings.emailNotifsDesc },
                   ].map(({key,label,desc})=>{
                     const on = (settingsData as Record<string,boolean>|undefined)?.[key];
                     return (

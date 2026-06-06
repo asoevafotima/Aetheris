@@ -127,8 +127,12 @@ export function CreateProblem() {
 
       navigate(`/problems/${problem.slug}`);
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg ?? 'Ошибка при создании задачи');
+      const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setError(detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join('; ') || 'Ошибка валидации');
+      } else {
+        setError((detail as string | undefined) ?? 'Ошибка при создании задачи');
+      }
     }
   };
 

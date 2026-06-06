@@ -34,6 +34,32 @@ def update_me(data: schemas.UserUpdate, db: Session = Depends(get_db),
               current_user: User = Depends(get_current_user)):
     return crud.update_user(db, current_user.id, data)
 
+@router.patch("/{user_id}/role", response_model=schemas.UserResponse)
+def update_role(user_id: UUID, data: schemas.UserRoleUpdate, db: Session = Depends(get_db),
+                current_user: User = Depends(require_role(["admin"]))):
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
+    user = crud.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.role = data.role
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.patch("/{user_id}/active", response_model=schemas.UserResponse)
+def update_active(user_id: UUID, data: schemas.UserActiveUpdate, db: Session = Depends(get_db),
+                  current_user: User = Depends(require_role(["admin"]))):
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
+    user = crud.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_active = data.is_active
+    db.commit()
+    db.refresh(user)
+    return user
+
 @router.delete("/me", status_code=204)
 def delete_me(db: Session = Depends(get_db),
               current_user: User = Depends(get_current_user)):

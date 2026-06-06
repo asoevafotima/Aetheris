@@ -23,6 +23,22 @@ export const profilesApi = {
     api.get<UserProfile>(`/profiles/${userId}`).then(r => r.data),
   updateMe: (data: Partial<UserProfile>) =>
     api.patch<UserProfile>('/profiles/me', data).then(r => r.data),
+  uploadAvatar: async (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const token = localStorage.getItem('access_token') ?? '';
+    const res = await fetch(`${base}/profiles/me/avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
+      throw Object.assign(new Error(err.detail ?? 'Upload failed'), { response: { data: err } });
+    }
+    return res.json() as Promise<UserProfile>;
+  },
 };
 
 // Settings
@@ -190,6 +206,10 @@ export const aiApi = {
 
 // Ratings
 export const ratingsApi = {
+  leaderboard: (limit = 100) =>
+    api.get<{ user_id: string; username: string; role: string; rating: number; created_at: string }[]>(
+      '/ratings/leaderboard', { params: { limit } }
+    ).then(r => r.data),
   me: (skip = 0, limit = 20) =>
     api.get<Rating[]>('/ratings/me', { params: { skip, limit } }).then(r => r.data),
   user: (userId: string, skip = 0, limit = 20) =>

@@ -15,7 +15,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import type { ChatMessage } from '../types';
 
-interface Member { id: string; username: string; role?: string }
+interface Member {
+  id: string;          // TeamMember record ID
+  user_id: string;     // actual User ID
+  username?: string;   // from nested user object (if backend returns it)
+  role?: string;
+  user?: { id: string; username: string; role: string };
+}
 interface TeamInvite { id: string; from_user: { id: string; username: string }; team: { id: string; name: string } }
 
 export function TeamDetail() {
@@ -102,8 +108,11 @@ export function TeamDetail() {
   );
 
   const memberList = (members ?? []) as Member[];
-  const isOwner    = team.owner_id === user?.id || memberList.find(m => m.id === user?.id && (m.role === 'owner' || m.role === 'admin'));
-  const isMember   = memberList.some(m => m.id === user?.id);
+  const getMemberUserId = (m: Member) => m.user?.id ?? m.user_id;
+  const getMemberUsername = (m: Member) => m.user?.username ?? m.username ?? m.user_id;
+  const isOwner = team.owner_id === user?.id
+    || !!memberList.find(m => getMemberUserId(m) === user?.id && (m.role === 'owner' || m.role === 'admin'));
+  const isMember = memberList.some(m => getMemberUserId(m) === user?.id);
   const chatList   = (messages ?? []) as ChatMessage[];
   const invList    = (myInvites ?? []) as TeamInvite[];
   const thisTeamInvites = invList.filter(i => i.team?.id === team.id);
@@ -197,7 +206,7 @@ export function TeamDetail() {
                         <input placeholder="Найди пользователя..." value={searchUser} onChange={e=>setSearchUser(e.target.value)}
                           style={{ width:'100%',paddingLeft:30,paddingRight:12,paddingTop:8,paddingBottom:8,background:inputBg,border:`1px solid ${inputBord}`,borderRadius:10,color:t1,fontSize:12,outline:'none',fontFamily:'inherit',boxSizing:'border-box' }}/>
                       </div>
-                      {userSearch && (userSearch as Member[]).filter(u => !memberList.find(m => m.id === u.id)).map(u => (
+                      {userSearch && (userSearch as Member[]).filter(u => !memberList.find(m => getMemberUserId(m) === u.id)).map(u => (
                         <button key={u.id}
                           onClick={() => inviteMut.mutate(u.id)}
                           disabled={inviteMut.isPending}
@@ -211,7 +220,7 @@ export function TeamDetail() {
                           </span>
                         </button>
                       ))}
-                      {searchUser.length >= 2 && (!userSearch || (userSearch as Member[]).filter(u => !memberList.find(m => m.id === u.id)).length === 0) && (
+                      {searchUser.length >= 2 && (!userSearch || (userSearch as Member[]).filter(u => !memberList.find(m => getMemberUserId(m) === u.id)).length === 0) && (
                         <p style={{ fontSize:12,color:t3,textAlign:'center',margin:'10px 0 4px' }}>Никого не найдено</p>
                       )}
                     </div>
@@ -224,27 +233,27 @@ export function TeamDetail() {
                 <div key={m.id} style={{ display:'flex',alignItems:'center',gap:10,padding:'12px 18px',borderBottom:`1px solid ${cardBord}`,transition:'background 0.15s' }}
                   onMouseEnter={e=>(e.currentTarget as HTMLDivElement).style.background=chipBg}
                   onMouseLeave={e=>(e.currentTarget as HTMLDivElement).style.background='transparent'}>
-                  <div style={{ width:36,height:36,borderRadius:'50%',background:m.role==='owner'||m.role==='admin'||m.id===team.owner_id?'linear-gradient(135deg,#f59e0b,#d97706)':'linear-gradient(135deg,#6366f1,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:900,color:'#fff',flexShrink:0 }}>
-                    {(m.username??'?')[0]?.toUpperCase()}
+                  <div style={{ width:36,height:36,borderRadius:'50%',background:m.role==='owner'||getMemberUserId(m)===team.owner_id?'linear-gradient(135deg,#f59e0b,#d97706)':'linear-gradient(135deg,#6366f1,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:900,color:'#fff',flexShrink:0 }}>
+                    {getMemberUsername(m)[0]?.toUpperCase()}
                   </div>
                   <div style={{ flex:1,minWidth:0 }}>
-                    <p style={{ fontSize:13,fontWeight:600,color:t1,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{m.username}</p>
+                    <p style={{ fontSize:13,fontWeight:600,color:t1,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{getMemberUsername(m)}</p>
                     <p style={{ fontSize:11,color:t3,margin:0,display:'flex',alignItems:'center',gap:4 }}>
-                      {(m.role==='owner'||m.id===team.owner_id)
+                      {(m.role==='owner'||getMemberUserId(m)===team.owner_id)
                         ? <><Crown size={9} color="#f59e0b"/> Владелец</>
                         : m.role==='admin' ? <><Crown size={9} color="#818cf8"/> Администратор</>
                         : 'Участник'}
                     </p>
                   </div>
-                  {isOwner && m.id !== user?.id && (
-                    <button onClick={() => removeMut.mutate(m.id)}
+                  {isOwner && getMemberUserId(m) !== user?.id && (
+                    <button onClick={() => removeMut.mutate(getMemberUserId(m))}
                       style={{ background:'none',border:'none',color:t3,cursor:'pointer',padding:4,transition:'color 0.15s' }}
                       onMouseEnter={e=>e.currentTarget.style.color='#f87171'}
                       onMouseLeave={e=>e.currentTarget.style.color=t3}>
                       <UserMinus size={13}/>
                     </button>
                   )}
-                  {m.id === user?.id && <span style={{ fontSize:10,color:'#818cf8',background:'rgba(99,102,241,0.1)',padding:'2px 6px',borderRadius:6,fontWeight:700 }}>Вы</span>}
+                  {getMemberUserId(m) === user?.id && <span style={{ fontSize:10,color:'#818cf8',background:'rgba(99,102,241,0.1)',padding:'2px 6px',borderRadius:6,fontWeight:700 }}>Вы</span>}
                 </div>
               ))}
 

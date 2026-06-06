@@ -1,9 +1,12 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from database import Base, engine
-import os
 from dotenv import load_dotenv
+
+os.makedirs("static/avatars", exist_ok=True)
 
 load_dotenv()
 
@@ -26,12 +29,16 @@ def _run_migrations():
             if col not in duel_cols:
                 conn.execute(text(sql))
 
-        # problems — difficulty_code and topic columns
+        # problems — difficulty_code, topic, status columns
         prob_cols = {c['name'] for c in insp.get_columns('problems')}
         if 'difficulty_code' not in prob_cols:
             conn.execute(text("ALTER TABLE problems ADD COLUMN difficulty_code VARCHAR(10)"))
         if 'topic' not in prob_cols:
             conn.execute(text("ALTER TABLE problems ADD COLUMN topic VARCHAR(100)"))
+        if 'status' not in prob_cols:
+            conn.execute(text("ALTER TABLE problems ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'draft'"))
+        if 'is_public' not in prob_cols:
+            conn.execute(text("ALTER TABLE problems ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT TRUE"))
 
         conn.commit()
 
@@ -131,6 +138,8 @@ app.include_router(user_weak_topics_router)
 app.include_router(problem_bookmarks_router)
 app.include_router(follows_router)
 app.include_router(audit_logs_router)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def root():

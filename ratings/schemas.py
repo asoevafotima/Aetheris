@@ -15,3 +15,10 @@ class RatingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class LeaderboardEntry(BaseModel):
+    user_id: UUID
+    username: str
+    role: str
+    rating: int
+    created_at: datetime

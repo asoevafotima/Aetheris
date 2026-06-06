@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -48,9 +49,13 @@ export function Profile() {
   const chipBg   = dark ? 'rgba(255,255,255,0.05)'  : 'rgba(0,0,0,0.04)';
   const chipBord = dark ? 'rgba(255,255,255,0.1)'   : 'rgba(0,0,0,0.08)';
 
-  const { data: user, isLoading } = useQuery({ queryKey:['user',targetId], queryFn:()=>usersApi.getById(targetId!), enabled:!!targetId });
+  const isMe        = targetId === me?.id;
+  const { fetchMe } = useAuthStore();
+  useEffect(() => { if (isMe) fetchMe(); }, [isMe]);
+
+  const { data: user, isLoading } = useQuery({ queryKey:['user',targetId], queryFn:()=>usersApi.getById(targetId!), enabled:!!targetId, staleTime:0 });
   const { data: profile }         = useQuery({ queryKey:['profile',targetId], queryFn:()=>profilesApi.getById(targetId!), enabled:!!targetId });
-  const { data: submissions }     = useQuery({ queryKey:['submissions','user',targetId], queryFn:()=>submissionsApi.me(0,10), enabled:targetId===me?.id });
+  const { data: submissions }     = useQuery({ queryKey:['submissions','user',targetId], queryFn:()=>submissionsApi.me(0,10), enabled:isMe });
   const { data: userAchievements }= useQuery({ queryKey:['achievements','user',targetId], queryFn:()=>achievementsApi.user(targetId!), enabled:!!targetId });
   const { data: ratings }         = useQuery({ queryKey:['ratings',targetId], queryFn:()=>ratingsApi.user(targetId!,0,10), enabled:!!targetId });
   const { data: following }       = useQuery({ queryKey:['following'], queryFn:followsApi.following, enabled:!!me });
@@ -71,8 +76,8 @@ export function Profile() {
 
   const accepted    = (submissions??[]).filter((s:Submission)=>s.status==='accepted').length;
   const ratingDelta = (ratings??[]).reduce((acc:number,r:{delta:number})=>acc+r.delta,0);
-  const isMe        = targetId===me?.id;
-  const role        = ROLE_CFG[user.role]??ROLE_CFG.user;
+  const effectiveRole = (isMe && me?.role) ? me.role : user.role;
+  const role        = ROLE_CFG[effectiveRole]??ROLE_CFG.user;
 
   return (
     <div style={{ position:'relative',minHeight:'calc(100vh - 56px)',background:pageBg }}>

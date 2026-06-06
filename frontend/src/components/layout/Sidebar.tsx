@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Code2, Trophy, Swords, Users, Bot, BarChart2,
   User, Settings, LogOut, Zap, BookOpen, Bell, ChevronLeft, ChevronRight,
-  ShieldCheck, UserPlus,
+  ShieldCheck, UserPlus, PlusSquare,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
@@ -88,6 +88,22 @@ export function Sidebar() {
         {/* Admin / Moderator section */}
         {isMod && (
           <div className={`mt-2 pt-2 border-t border-slate-100 flex flex-col gap-0.5`}>
+            <NavLink
+              to="/problems/create"
+              className={({ isActive }) => `
+                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                transition-all duration-150
+                ${collapsed ? 'justify-center' : ''}
+                ${isActive
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                  : 'text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 border border-transparent'
+                }
+              `}
+              title={collapsed ? 'Создать задачу' : undefined}
+            >
+              <PlusSquare size={18} className="shrink-0" />
+              {!collapsed && <span>Создать задачу</span>}
+            </NavLink>
             {isAdmin && (
               <NavLink
                 to="/admin"

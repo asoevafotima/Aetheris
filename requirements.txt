@@ -22,3 +22,4 @@ groq
 httpx
 python-slugify
 pillow
+aiofiles

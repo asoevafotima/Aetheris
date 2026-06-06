@@ -3,12 +3,11 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Crown, Search, TrendingUp, X } from 'lucide-react';
-import { usersApi } from '../api/endpoints';
+import { ratingsApi } from '../api/endpoints';
 import { useAuthStore }  from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { useT }          from '../i18n';
 import { BackgroundGraph } from '../components/BackgroundGraph';
-import type { User as UserType } from '../types';
 
 const ROLE_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   admin:     { label:'Админ',     color:'#f87171', bg:'rgba(239,68,68,0.12)',   border:'rgba(239,68,68,0.3)'   },
@@ -22,11 +21,11 @@ const RANK_CFG = [
   { color:'#cd7c2f', bg:'rgba(205,124,47,0.12)', border:'rgba(205,124,47,0.3)', glow:'rgba(205,124,47,0.2)', size:56, podium:64,  avatarGrad:'linear-gradient(135deg,#92400e,#cd7c2f)' },
 ];
 
-const fakeRating = (i: number) => Math.max(800, 2800 - i * 34 + Math.floor(Math.random() * 12));
+type Entry = { user_id: string; username: string; role: string; rating: number; created_at: string };
 
 export function Leaderboard() {
   const [search, setSearch] = useState('');
-  const { user: me }  = useAuthStore();
+  const { user: me }    = useAuthStore();
   const { lang, theme } = useThemeStore();
   const dark = theme === 'dark';
   const t    = useT();
@@ -38,25 +37,23 @@ export function Leaderboard() {
   const cardBg   = dark ? 'rgba(6,12,28,0.72)'      : 'rgba(255,255,255,0.97)';
   const cardBord = dark ? 'rgba(255,255,255,0.07)'  : 'rgba(0,0,0,0.08)';
   const chipBg   = dark ? 'rgba(255,255,255,0.05)'  : 'rgba(0,0,0,0.04)';
-  const chipBord = dark ? 'rgba(255,255,255,0.1)'   : 'rgba(0,0,0,0.09)';
   const inputBg  = dark ? 'rgba(255,255,255,0.05)'  : 'rgba(0,0,0,0.04)';
   const inputBord= dark ? 'rgba(255,255,255,0.1)'   : 'rgba(0,0,0,0.11)';
   const hoverBg  = dark ? 'rgba(255,255,255,0.04)'  : 'rgba(0,0,0,0.03)';
   const meBg     = dark ? 'rgba(99,102,241,0.08)'   : 'rgba(99,102,241,0.05)';
-  const meBord   = dark ? 'rgba(99,102,241,0.25)'   : 'rgba(99,102,241,0.2)';
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users','list'],
-    queryFn: () => usersApi.list(0, 100),
+  const { data: entries, isLoading } = useQuery({
+    queryKey: ['leaderboard'],
+    queryFn: () => ratingsApi.leaderboard(100),
+    staleTime: 60_000,
   });
 
-  const filtered = ((users ?? []) as UserType[]).filter(u =>
-    u.username.toLowerCase().includes(search.toLowerCase())
-  );
+  const all = (entries ?? []) as Entry[];
+  const filtered = all.filter(u => u.username.toLowerCase().includes(search.toLowerCase()));
 
-  const podiumOrder = [filtered[1], filtered[0], filtered[2]].filter(Boolean);
+  const podiumOrder    = [filtered[1], filtered[0], filtered[2]].filter(Boolean);
   const podiumCfgOrder = [RANK_CFG[1], RANK_CFG[0], RANK_CFG[2]];
-  const podiumRankOrder = [2, 1, 3];
+  const podiumRankOrder= [2, 1, 3];
 
   return (
     <div style={{ position:'relative', minHeight:'calc(100vh - 56px)', background:pageBg }}>
@@ -74,8 +71,8 @@ export function Leaderboard() {
           <p style={{ fontSize:14,color:t2,margin:0 }}>{t.leaderboard.subtitle}</p>
         </motion.div>
 
-        {/* Podium */}
-        {!isLoading && filtered.length >= 3 && (
+        {/* Podium — only show if top 3 have actual ratings > 0 */}
+        {!isLoading && filtered.length >= 3 && filtered[0].rating > 0 && (
           <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.1,duration:0.5}}
             style={{ display:'flex', alignItems:'flex-end', justifyContent:'center', gap:16, marginBottom:44 }}>
             {podiumOrder.map((u, idx) => {
@@ -83,17 +80,12 @@ export function Leaderboard() {
               const rank = podiumRankOrder[idx];
               const trueIdx = filtered.indexOf(u);
               return (
-                <Link key={u.id} to={`/profile/${u.id}`} style={{ textDecoration:'none', display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
-                  {/* Avatar */}
+                <Link key={u.user_id} to={`/profile/${u.user_id}`} style={{ textDecoration:'none', display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
                   <motion.div whileHover={{ scale:1.08 }} style={{ position:'relative' }}>
-                    <div style={{
-                      width:cfg.size, height:cfg.size, borderRadius:'50%',
-                      background:cfg.avatarGrad,
+                    <div style={{ width:cfg.size, height:cfg.size, borderRadius:'50%', background:cfg.avatarGrad,
                       display:'flex',alignItems:'center',justifyContent:'center',
                       fontSize:cfg.size*0.38,fontWeight:900,color:'#fff',
-                      boxShadow:`0 0 30px ${cfg.glow}`,
-                      border:`2px solid ${cfg.border}`,
-                    }}>
+                      boxShadow:`0 0 30px ${cfg.glow}`, border:`2px solid ${cfg.border}` }}>
                       {u.username[0].toUpperCase()}
                     </div>
                     {rank === 1 && (
@@ -101,15 +93,15 @@ export function Leaderboard() {
                     )}
                   </motion.div>
                   <p style={{ fontSize:13,fontWeight:800,color:cfg.color,margin:0,textAlign:'center' }}>{u.username}</p>
-                  <p style={{ fontSize:12,fontFamily:'monospace',color:t2,margin:0,fontWeight:700 }}>{fakeRating(trueIdx).toLocaleString()}</p>
-
-                  {/* Podium block */}
-                  <div style={{
-                    width:84, height:cfg.podium, borderRadius:'12px 12px 0 0',
-                    background: dark ? `rgba(${rank===1?'245,158,11':rank===2?'148,163,184':'205,124,47'},0.12)` : `rgba(${rank===1?'245,158,11':rank===2?'148,163,184':'205,124,47'},0.1)`,
+                  <p style={{ fontSize:12,fontFamily:'monospace',color:t2,margin:0,fontWeight:700 }}>
+                    {u.rating.toLocaleString()}
+                  </p>
+                  <div style={{ width:84, height:cfg.podium, borderRadius:'12px 12px 0 0',
+                    background: dark
+                      ? `rgba(${rank===1?'245,158,11':rank===2?'148,163,184':'205,124,47'},0.12)`
+                      : `rgba(${rank===1?'245,158,11':rank===2?'148,163,184':'205,124,47'},0.1)`,
                     border:`1px solid ${cfg.border}`, borderBottom:'none',
-                    display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:4,
-                  }}>
+                    display:'flex',alignItems:'center',justifyContent:'center' }}>
                     <span style={{ fontSize:28,fontWeight:900,color:cfg.color,fontFamily:'monospace' }}>{rank}</span>
                   </div>
                 </Link>
@@ -121,28 +113,32 @@ export function Leaderboard() {
         {/* Search */}
         <div style={{ position:'relative', marginBottom:20 }}>
           <Search size={15} style={{ position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:t3 }} />
-          <input
-            placeholder="Поиск по нику..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width:'100%',paddingLeft:38,paddingRight:search?36:14,paddingTop:11,paddingBottom:11,background:inputBg,border:`1px solid ${inputBord}`,borderRadius:13,color:t1,fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' }}
-          />
+          <input placeholder="Поиск по нику..." value={search} onChange={e => setSearch(e.target.value)}
+            style={{ width:'100%',paddingLeft:38,paddingRight:search?36:14,paddingTop:11,paddingBottom:11,
+              background:inputBg,border:`1px solid ${inputBord}`,borderRadius:13,color:t1,fontSize:13,
+              outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const }}
+            onFocus={e=>e.target.style.borderColor='rgba(99,102,241,0.5)'}
+            onBlur={e =>e.target.style.borderColor=inputBord}/>
           {search && (
-            <button onClick={()=>setSearch('')} style={{ position:'absolute',right:11,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:t2,cursor:'pointer' }}>
+            <button onClick={()=>setSearch('')}
+              style={{ position:'absolute',right:11,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:t2,cursor:'pointer' }}>
               <X size={14}/>
             </button>
           )}
         </div>
 
         {/* Table */}
-        <div style={{ background:cardBg, border:`1px solid ${cardBord}`, borderRadius:20, overflow:'hidden', backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)', boxShadow:dark?'none':'0 4px 30px rgba(0,0,0,0.07)' }}>
-          {/* Shimmer top line */}
+        <div style={{ background:cardBg, border:`1px solid ${cardBord}`, borderRadius:20, overflow:'hidden',
+          backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)',
+          boxShadow:dark?'none':'0 4px 30px rgba(0,0,0,0.07)' }}>
           <div style={{ height:1, background:'linear-gradient(90deg,transparent,rgba(99,102,241,0.4),transparent)' }} />
 
           {/* Header */}
-          <div style={{ display:'grid', gridTemplateColumns:'64px 1fr 130px 110px', padding:'12px 24px', borderBottom:`1px solid ${cardBord}` }}>
-            {['#', 'Участник', 'Рейтинг', 'Роль'].map((h,i) => (
-              <span key={h} style={{ fontSize:10,fontWeight:800,color:t3,textTransform:'uppercase',letterSpacing:'0.1em',textAlign:i>=2?'right':'left' }}>{h}</span>
+          <div style={{ display:'grid', gridTemplateColumns:'64px 1fr 130px 110px',
+            padding:'12px 24px', borderBottom:`1px solid ${cardBord}` }}>
+            {['#', 'Участник', 'Рейтинг', 'Роль'].map((h, i) => (
+              <span key={h} style={{ fontSize:10,fontWeight:800,color:t3,textTransform:'uppercase',
+                letterSpacing:'0.1em', textAlign:i>=2?'right':'left' }}>{h}</span>
             ))}
           </div>
 
@@ -158,36 +154,32 @@ export function Leaderboard() {
               <p style={{ margin:0,fontSize:14 }}>{t.leaderboard.not_found}</p>
             </div>
           ) : (
-            filtered.map((u: UserType, i: number) => {
-              const isMe   = u.id === me?.id;
+            filtered.map((u: Entry, i: number) => {
+              const isMe   = u.user_id === me?.id;
               const role   = ROLE_CFG[u.role] ?? ROLE_CFG.user;
-              const rating = fakeRating(i);
-              const ratingColor = i===0 ? '#f59e0b' : i<3 ? '#818cf8' : i<10 ? '#06b6d4' : t1;
-              const avatarGrad  = u.role==='admin' ? 'linear-gradient(135deg,#ef4444,#dc2626)'
-                                : u.role==='moderator' ? 'linear-gradient(135deg,#0891b2,#06b6d4)'
-                                : 'linear-gradient(135deg,#6366f1,#4f46e5)';
+              const ratingColor = u.rating === 0 ? t3
+                : i===0 ? '#f59e0b' : i<3 ? '#818cf8' : i<10 ? '#06b6d4' : t1;
+              const avatarGrad = u.role==='admin'
+                ? 'linear-gradient(135deg,#ef4444,#dc2626)'
+                : u.role==='moderator'
+                  ? 'linear-gradient(135deg,#0891b2,#06b6d4)'
+                  : 'linear-gradient(135deg,#6366f1,#4f46e5)';
 
               return (
-                <motion.div
-                  key={u.id}
-                  initial={{ opacity:0, x:-8 }}
-                  animate={{ opacity:1, x:0 }}
+                <motion.div key={u.user_id} initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }}
                   transition={{ delay:i*0.018, duration:0.28 }}
-                  style={{
-                    display:'grid', gridTemplateColumns:'64px 1fr 130px 110px',
+                  style={{ display:'grid', gridTemplateColumns:'64px 1fr 130px 110px',
                     alignItems:'center', padding:'13px 24px',
                     borderBottom: i < filtered.length-1 ? `1px solid ${cardBord}` : 'none',
                     background: isMe ? meBg : 'transparent',
                     borderLeft: isMe ? '3px solid rgba(99,102,241,0.5)' : '3px solid transparent',
-                    transition:'background 0.15s',
-                    cursor:'default',
-                  }}
+                    transition:'background 0.15s', cursor:'default' }}
                   onMouseEnter={e=>{if(!isMe)(e.currentTarget as HTMLDivElement).style.background=hoverBg}}
-                  onMouseLeave={e=>{if(!isMe)(e.currentTarget as HTMLDivElement).style.background='transparent'}}
-                >
+                  onMouseLeave={e=>{if(!isMe)(e.currentTarget as HTMLDivElement).style.background='transparent'}}>
+
                   {/* Rank */}
                   <div style={{ display:'flex',alignItems:'center',gap:6 }}>
-                    {i < 3 ? (
+                    {i < 3 && u.rating > 0 ? (
                       <Crown size={16} color={RANK_CFG[i].color} />
                     ) : (
                       <span style={{ fontSize:13,fontFamily:'monospace',color:t3,fontWeight:600,width:20,textAlign:'center' }}>{i+1}</span>
@@ -195,17 +187,25 @@ export function Leaderboard() {
                   </div>
 
                   {/* User */}
-                  <Link to={`/profile/${u.id}`} style={{ textDecoration:'none',display:'flex',alignItems:'center',gap:12 }}>
-                    <div style={{ width:38,height:38,borderRadius:'50%',background:avatarGrad,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,fontWeight:900,color:'#fff',flexShrink:0,boxShadow:i<3?`0 0 12px ${RANK_CFG[i]?.glow}`:undefined }}>
+                  <Link to={`/profile/${u.user_id}`} style={{ textDecoration:'none',display:'flex',alignItems:'center',gap:12 }}>
+                    <div style={{ width:38,height:38,borderRadius:'50%',background:avatarGrad,
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      fontSize:15,fontWeight:900,color:'#fff',flexShrink:0,
+                      boxShadow:i<3&&u.rating>0?`0 0 12px ${RANK_CFG[i]?.glow}`:undefined }}>
                       {u.username[0].toUpperCase()}
                     </div>
                     <div>
                       <p style={{ fontSize:14,fontWeight:700,color:t1,margin:'0 0 2px',display:'flex',alignItems:'center',gap:6 }}>
                         {u.username}
-                        {isMe && <span style={{ fontSize:10,fontWeight:800,color:'#818cf8',background:'rgba(99,102,241,0.12)',border:'1px solid rgba(99,102,241,0.25)',padding:'1px 7px',borderRadius:20 }}>{lang==='ru'?'Вы':'You'}</span>}
+                        {isMe && (
+                          <span style={{ fontSize:10,fontWeight:800,color:'#818cf8',background:'rgba(99,102,241,0.12)',border:'1px solid rgba(99,102,241,0.25)',padding:'1px 7px',borderRadius:20 }}>
+                            {lang==='ru'?'Вы':'You'}
+                          </span>
+                        )}
                       </p>
                       <p style={{ fontSize:11,color:t3,margin:0 }}>
-                        С {new Date(u.created_at).toLocaleDateString(lang==='ru'?'ru-RU':'en-US',{month:'short',year:'numeric'})}
+                        {lang==='ru'?'С ':'Since '}
+                        {new Date(u.created_at).toLocaleDateString(lang==='ru'?'ru-RU':'en-US',{month:'short',year:'numeric'})}
                       </p>
                     </div>
                   </Link>
@@ -214,13 +214,14 @@ export function Leaderboard() {
                   <div style={{ textAlign:'right',display:'flex',alignItems:'center',justifyContent:'flex-end',gap:5 }}>
                     <TrendingUp size={12} color={ratingColor} />
                     <span style={{ fontSize:15,fontWeight:800,fontFamily:'monospace',color:ratingColor }}>
-                      {rating.toLocaleString()}
+                      {u.rating === 0 ? '—' : u.rating.toLocaleString()}
                     </span>
                   </div>
 
                   {/* Role */}
                   <div style={{ textAlign:'right' }}>
-                    <span style={{ fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:20,background:role.bg,color:role.color,border:`1px solid ${role.border}` }}>
+                    <span style={{ fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:20,
+                      background:role.bg,color:role.color,border:`1px solid ${role.border}` }}>
                       {role.label}
                     </span>
                   </div>
@@ -232,7 +233,7 @@ export function Leaderboard() {
 
         {!isLoading && filtered.length > 0 && (
           <p style={{ textAlign:'center',fontSize:12,color:t3,marginTop:16 }}>
-            {filtered.length} участников в рейтинге
+            {filtered.length} {lang==='ru'?'участников в рейтинге':'participants in leaderboard'}
           </p>
         )}
       </div>

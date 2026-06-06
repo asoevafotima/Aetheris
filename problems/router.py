@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from database import get_db
 from . import crud, schemas
 from auth.router import get_current_user, require_role
@@ -29,8 +30,12 @@ def get_problem(slug: str, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=schemas.ProblemResponse, status_code=201)
 def create_problem(data: schemas.ProblemCreate, db: Session = Depends(get_db),
-                   current_user: User = Depends(get_current_user)):
-    return crud.create_problem(db, data, current_user.id)
+                   current_user: User = Depends(require_role(["admin", "moderator"]))):
+    try:
+        return crud.create_problem(db, data, current_user.id)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Задача с таким названием уже существует — измените заголовок")
 
 @router.patch("/{problem_id}", response_model=schemas.ProblemResponse)
 def update_problem(

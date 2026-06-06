@@ -1,85 +1,105 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShieldCheck, Users, Search, ChevronDown, Check, UserCog,
+  ShieldCheck, Users, Search, ChevronDown, Check,
+  UserCog, Crown, Ban, CheckCircle2, X,
 } from 'lucide-react';
 import { usersApi } from '../api/endpoints';
-import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
-import { SkeletonLine } from '../components/ui/Spinner';
-import { useAuthStore } from '../store/authStore';
-import { Navigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
-import api from '../api/client';
-import type { User } from '../types';
+import { useAuthStore }  from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
+import { useT }          from '../i18n';
+import { Navigate }      from 'react-router-dom';
+import { format }        from 'date-fns';
+import { ru }            from 'date-fns/locale';
+import api               from '../api/client';
+import type { User }     from '../types';
+import { BackgroundGraph } from '../components/BackgroundGraph';
 
-const ROLES = [
-  { value: 'user',      label: 'Участник',        color: 'bg-slate-100 text-slate-600 border-slate-200' },
-  { value: 'moderator', label: 'Модератор',       color: 'bg-cyan-100 text-cyan-700 border-cyan-200'   },
-  { value: 'admin',     label: 'Администратор',   color: 'bg-red-100 text-red-700 border-red-200'      },
-];
+const ROLE_CFG = {
+  admin:     { label: 'Администратор', color: '#f87171', bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.35)',  grad: 'linear-gradient(135deg,#ef4444,#dc2626)', icon: Crown     },
+  moderator: { label: 'Модератор',     color: '#22d3ee', bg: 'rgba(6,182,212,0.12)',  border: 'rgba(6,182,212,0.35)',  grad: 'linear-gradient(135deg,#06b6d4,#0891b2)', icon: ShieldCheck },
+  user:      { label: 'Участник',      color: '#818cf8', bg: 'rgba(99,102,241,0.1)',  border: 'rgba(99,102,241,0.25)', grad: 'linear-gradient(135deg,#6366f1,#4f46e5)', icon: Users     },
+};
 
-function RoleDropdown({ user, onChangeRole }: { user: User; onChangeRole: (id: string, role: string) => void }) {
+function RoleDropdown({ user: u, dark, onChangeRole }: {
+  user: User; dark: boolean; onChangeRole: (id: string, role: string) => void;
+}) {
   const [open, setOpen] = useState(false);
-  const current = ROLES.find(r => r.value === user.role) ?? ROLES[0];
+  const cfg = ROLE_CFG[u.role as keyof typeof ROLE_CFG] ?? ROLE_CFG.user;
+  const dropBg   = dark ? 'rgba(6,12,28,0.98)' : 'rgba(255,255,255,0.99)';
+  const dropBord = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  const hoverBg  = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
+  const t1       = dark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.8)';
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all cursor-pointer ${current.color}`}
-      >
-        {current.label}
-        <ChevronDown size={12} />
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(v => !v)}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 10,
+          background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color,
+          fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}>
+        {cfg.label} <ChevronDown size={11} style={{ transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'none' }}/>
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-8 z-20 w-44 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
-            {ROLES.map(r => (
-              <button
-                key={r.value}
-                onClick={() => { onChangeRole(user.id, r.value); setOpen(false); }}
-                className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                <span className={`px-2 py-0.5 rounded-md border text-xs font-medium ${r.color}`}>{r.label}</span>
-                {user.role === r.value && <Check size={14} className="text-purple-600" />}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
-function StatBox({ value, label, icon: Icon, color }: { value: number; label: string; icon: React.ElementType; color: string }) {
-  return (
-    <div className="flex items-center gap-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
-        <Icon size={20} />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-slate-900">{value}</p>
-        <p className="text-slate-500 text-sm">{label}</p>
-      </div>
+      <AnimatePresence>
+        {open && (
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setOpen(false)}/>
+            <motion.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.12 }}
+              style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 20, width: 180,
+                borderRadius: 14, background: dropBg, border: `1px solid ${dropBord}`,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.25)', overflow: 'hidden', backdropFilter: 'blur(24px)' }}>
+              {Object.entries(ROLE_CFG).map(([val, rc]) => (
+                <button key={val} onClick={() => { onChangeRole(u.id, val); setOpen(false); }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: t1, fontSize: 13, transition: 'background 0.12s', textAlign: 'left' }}
+                  onMouseEnter={e => e.currentTarget.style.background = hoverBg}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: rc.color, flexShrink: 0 }}/>
+                    <span style={{ color: rc.color, fontWeight: 600 }}>{rc.label}</span>
+                  </span>
+                  {u.role === val && <Check size={13} style={{ color: '#818cf8' }}/>}
+                </button>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 export function AdminPanel() {
-  const { user: me } = useAuthStore();
-  const qc = useQueryClient();
-  const [search, setSearch] = useState('');
+  const { user: me }    = useAuthStore();
+  const { theme }       = useThemeStore();
+  const t               = useT();
+  const dark            = theme === 'dark';
+  const qc              = useQueryClient();
+  const [search, setSearch]       = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
   if (me?.role !== 'admin') return <Navigate to="/dashboard" replace />;
 
+  // ── tokens ──
+  const pageBg   = dark ? '#04080f'                : '#f1f5f9';
+  const t1       = dark ? 'rgba(255,255,255,0.9)'  : 'rgba(0,0,0,0.88)';
+  const t2       = dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.5)';
+  const t3       = dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.28)';
+  const cardBg   = dark ? 'rgba(6,12,28,0.75)'     : 'rgba(255,255,255,0.97)';
+  const cardBord = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+  const rowHov   = dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
+  const inputBg  = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
+  const inputBord= dark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.12)';
+  const chipBg   = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
+  const chipBord = dark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.09)';
+
   const { data: users, isLoading } = useQuery({
     queryKey: ['users', 'all'],
     queryFn: () => usersApi.list(0, 200),
+    staleTime: 0,
   });
 
   const changeRoleMut = useMutation({
@@ -88,190 +108,261 @@ export function AdminPanel() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users', 'all'] }),
   });
 
-  // Прямое изменение роли через SQL (через специальный эндпоинт или patch)
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    try {
-      await api.patch(`/users/${userId}`, { role: newRole });
-      qc.invalidateQueries({ queryKey: ['users', 'all'] });
-    } catch {
-      // Fallback — прямой запрос
-      changeRoleMut.mutate({ id: userId, role: newRole });
-    }
-  };
+  const toggleActiveMut = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      api.patch(`/users/${id}/active`, { is_active }).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users', 'all'] }),
+  });
 
   const allUsers = (users ?? []) as User[];
   const filtered = allUsers.filter(u => {
-    const matchSearch = u.username.toLowerCase().includes(search.toLowerCase()) ||
-                        u.email.toLowerCase().includes(search.toLowerCase());
-    const matchRole   = !roleFilter || u.role === roleFilter;
-    return matchSearch && matchRole;
+    const q = search.toLowerCase();
+    return (!q || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+      && (!roleFilter || u.role === roleFilter);
   });
 
-  const admins = allUsers.filter(u => u.role === 'admin').length;
-  const mods   = allUsers.filter(u => u.role === 'moderator').length;
-  const regular= allUsers.filter(u => u.role === 'user').length;
+  const stats = [
+    { label: 'Всего', value: allUsers.length,                                          color: '#818cf8', grad: 'linear-gradient(135deg,#6366f1,#4f46e5)' },
+    { label: 'Админов',    value: allUsers.filter(u => u.role === 'admin').length,      color: '#f87171', grad: 'linear-gradient(135deg,#ef4444,#dc2626)' },
+    { label: 'Модераторов',value: allUsers.filter(u => u.role === 'moderator').length,  color: '#22d3ee', grad: 'linear-gradient(135deg,#06b6d4,#0891b2)' },
+    { label: 'Участников', value: allUsers.filter(u => u.role === 'user').length,       color: '#34d399', grad: 'linear-gradient(135deg,#10b981,#059669)' },
+  ];
+
+  const TABS = [
+    { v: '',          l: 'Все'            },
+    { v: 'admin',     l: 'Администраторы' },
+    { v: 'moderator', l: 'Модераторы'     },
+    { v: 'user',      l: 'Участники'      },
+  ];
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center">
-            <ShieldCheck size={20} className="text-red-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Панель администратора</h1>
-            <p className="text-slate-500 text-sm">Управление пользователями и ролями</p>
-          </div>
-        </div>
-      </motion.div>
+    <div style={{ position: 'relative', minHeight: 'calc(100vh - 56px)', background: pageBg }}>
+      <BackgroundGraph noSphere light={!dark}/>
 
-      {/* Как создавать роли */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-        className="mb-6 p-5 rounded-xl border border-blue-200 bg-blue-50"
-      >
-        <h2 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-          <UserCog size={16} /> Как назначить роль?
-        </h2>
-        <div className="grid md:grid-cols-3 gap-4 text-sm text-blue-800">
-          <div className="flex items-start gap-2">
-            <span className="px-2 py-0.5 rounded border border-red-300 bg-red-100 text-red-700 text-xs font-medium shrink-0 mt-0.5">Администратор</span>
-            <p>Полный доступ: создание/удаление задач, контестов, управление всеми пользователями.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="px-2 py-0.5 rounded border border-cyan-300 bg-cyan-100 text-cyan-700 text-xs font-medium shrink-0 mt-0.5">Модератор</span>
-            <p>Создание задач и контестов, проверка решений. Не может удалять пользователей.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="px-2 py-0.5 rounded border border-slate-300 bg-slate-100 text-slate-700 text-xs font-medium shrink-0 mt-0.5">Участник</span>
-            <p>Обычный конкурсант. Решает задачи, участвует в контестах и дуэлях.</p>
-          </div>
-        </div>
-        <p className="text-xs text-blue-600 mt-3">
-          💡 Нажмите на кнопку роли справа от пользователя, чтобы изменить её.
-        </p>
-      </motion.div>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto', padding: '36px 36px 60px' }}>
 
-      {/* Статистика */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatBox value={allUsers.length} label="Всего пользователей" icon={Users}     color="bg-purple-100 text-purple-600" />
-        <StatBox value={admins}          label="Администраторов"     icon={ShieldCheck}color="bg-red-100 text-red-600"      />
-        <StatBox value={mods}            label="Модераторов"         icon={UserCog}    color="bg-cyan-100 text-cyan-600"    />
-        <StatBox value={regular}         label="Участников"          icon={Users}      color="bg-emerald-100 text-emerald-600" />
-      </div>
-
-      {/* Фильтры */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Поиск по логину или email..."
-            icon={<Search size={16} />}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1">
-          {[
-            { v: '',          l: 'Все'            },
-            { v: 'admin',     l: 'Администраторы' },
-            { v: 'moderator', l: 'Модераторы'     },
-            { v: 'user',      l: 'Участники'      },
-          ].map(t => (
-            <button
-              key={t.v}
-              onClick={() => setRoleFilter(t.v)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
-                roleFilter === t.v
-                  ? 'bg-purple-600 text-white'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {t.l}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Таблица */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Пользователь</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Дата регистрации</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Статус</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Роль</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading
-                ? Array(8).fill(0).map((_, i) => (
-                    <tr key={i} className="border-b border-slate-100">
-                      <td colSpan={5} className="px-5 py-4"><SkeletonLine className="w-full" /></td>
-                    </tr>
-                  ))
-                : filtered.map((u: User, i) => (
-                    <motion.tr
-                      key={u.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: i * 0.02 }}
-                      className={`border-b border-slate-100 hover:bg-slate-50/70 transition-colors ${u.id === me?.id ? 'bg-purple-50/40' : ''}`}
-                    >
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${
-                            u.role === 'admin' ? 'bg-red-500' : u.role === 'moderator' ? 'bg-cyan-600' : 'bg-purple-600'
-                          }`}>
-                            {u.username[0].toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">
-                              {u.username}
-                              {u.id === me?.id && <span className="ml-1.5 text-xs text-purple-500">(вы)</span>}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-500">{u.email}</td>
-                      <td className="px-5 py-3.5 text-sm text-slate-500">
-                        {format(new Date(u.created_at), 'd MMM yyyy', { locale: ru })}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-medium border ${
-                          u.is_active
-                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                            : 'bg-slate-100 text-slate-500 border-slate-200'
-                        }`}>
-                          {u.is_active ? 'Активен' : 'Отключён'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {u.id !== me?.id ? (
-                          <RoleDropdown user={u} onChangeRole={handleRoleChange} />
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">нельзя изменить себя</span>
-                        )}
-                      </td>
-                    </motion.tr>
-                  ))
-              }
-            </tbody>
-          </table>
-          {!isLoading && filtered.length === 0 && (
-            <div className="py-16 text-center text-slate-400">
-              <Users size={40} className="mx-auto mb-3 opacity-30" />
-              <p>Пользователи не найдены</p>
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+          style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(239,68,68,0.12)',
+              border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 20px rgba(239,68,68,0.15)' }}>
+              <ShieldCheck size={20} color="#f87171"/>
             </div>
-          )}
-        </div>
-      </Card>
+            <div>
+              <h1 style={{ fontSize: 28, fontWeight: 900, color: t1, margin: 0, letterSpacing: '-0.02em' }}>
+                Панель администратора
+              </h1>
+              <p style={{ fontSize: 14, color: t2, margin: 0 }}>Управление пользователями и ролями</p>
+            </div>
+          </div>
+        </motion.div>
 
-      <p className="text-xs text-slate-400 mt-4 text-center">
-        Всего пользователей: {filtered.length} из {allUsers.length}
-      </p>
+        {/* Stat cards */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06, duration: 0.4 }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+          {stats.map((s, i) => (
+            <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 + i * 0.04, duration: 0.35 }}
+              style={{ background: cardBg, border: `1px solid ${cardBord}`, borderRadius: 18,
+                overflow: 'hidden', backdropFilter: 'blur(24px)', boxShadow: dark ? 'none' : '0 4px 20px rgba(0,0,0,0.05)' }}>
+              <div style={{ height: 2, background: s.grad }}/>
+              <div style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: s.grad,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: `0 0 16px ${s.color}40`, flexShrink: 0 }}>
+                  <Users size={18} color="#fff"/>
+                </div>
+                <div>
+                  <p style={{ fontSize: 26, fontWeight: 900, color: s.color, margin: 0, lineHeight: 1 }}>{s.value}</p>
+                  <p style={{ fontSize: 12, color: t3, margin: '3px 0 0', fontWeight: 600 }}>{s.label}</p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Roles info card */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }}
+          style={{ background: dark ? 'rgba(6,12,28,0.6)' : 'rgba(99,102,241,0.05)',
+            border: `1px solid ${dark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}`,
+            borderRadius: 18, padding: '16px 22px', marginBottom: 24, backdropFilter: 'blur(24px)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <UserCog size={15} color="#818cf8"/>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#818cf8' }}>Права ролей</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+            {Object.entries(ROLE_CFG).map(([, rc]) => (
+              <div key={rc.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ padding: '3px 10px', borderRadius: 8, background: rc.bg, color: rc.color,
+                  border: `1px solid ${rc.border}`, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 1 }}>
+                  {rc.label}
+                </span>
+                <p style={{ fontSize: 12, color: t2, margin: 0, lineHeight: 1.5 }}>
+                  {rc.label === 'Администратор' && 'Полный доступ: задачи, контесты, пользователи.'}
+                  {rc.label === 'Модератор'     && 'Создание задач и контестов, проверка решений.'}
+                  {rc.label === 'Участник'      && 'Решает задачи, участвует в контестах и дуэлях.'}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Filters */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}
+          style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+          {/* Search */}
+          <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: t3, pointerEvents: 'none' }}/>
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск по логину или email..."
+              style={{ width: '100%', paddingLeft: 34, paddingRight: 12, paddingTop: 10, paddingBottom: 10,
+                background: inputBg, border: `1px solid ${inputBord}`, borderRadius: 12,
+                color: t1, fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
+              onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'}
+              onBlur={e  => e.target.style.borderColor = inputBord}/>
+          </div>
+
+          {/* Role tabs */}
+          <div style={{ display: 'flex', gap: 4, background: chipBg, border: `1px solid ${chipBord}`, borderRadius: 12, padding: 4 }}>
+            {TABS.map(tab => (
+              <button key={tab.v} onClick={() => setRoleFilter(tab.v)}
+                style={{ padding: '7px 14px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  border: 'none', transition: 'all 0.15s',
+                  background: roleFilter === tab.v ? 'rgba(99,102,241,0.2)' : 'transparent',
+                  color:      roleFilter === tab.v ? '#818cf8' : t2 }}>
+                {tab.l}
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Users table */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.4 }}
+          style={{ background: cardBg, border: `1px solid ${cardBord}`, borderRadius: 20,
+            overflow: 'hidden', backdropFilter: 'blur(24px)', boxShadow: dark ? 'none' : '0 4px 24px rgba(0,0,0,0.06)' }}>
+          <div style={{ height: 2, background: 'linear-gradient(90deg,#6366f1,#06b6d4,transparent)' }}/>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${cardBord}` }}>
+                  {['Пользователь', 'Email', 'Дата', 'Статус', 'Роль', 'Действия'].map(h => (
+                    <th key={h} style={{ padding: '13px 18px', textAlign: 'left', fontSize: 11,
+                      fontWeight: 800, color: t3, textTransform: 'uppercase', letterSpacing: '0.07em',
+                      background: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', whiteSpace: 'nowrap' }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading
+                  ? Array(6).fill(0).map((_, i) => (
+                      <tr key={i} style={{ borderBottom: `1px solid ${cardBord}` }}>
+                        {Array(6).fill(0).map((_, j) => (
+                          <td key={j} style={{ padding: '14px 18px' }}>
+                            <div style={{ height: 14, borderRadius: 7, background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                              width: j === 0 ? 140 : j === 1 ? 160 : 80 }}/>
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  : filtered.map((u: User, i) => {
+                      const rc = ROLE_CFG[u.role as keyof typeof ROLE_CFG] ?? ROLE_CFG.user;
+                      const isMe = u.id === me?.id;
+                      return (
+                        <motion.tr key={u.id}
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.025 }}
+                          style={{ borderBottom: `1px solid ${cardBord}`, transition: 'background 0.12s',
+                            background: isMe ? (dark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)') : 'transparent' }}
+                          onMouseEnter={e => { if (!isMe) (e.currentTarget as HTMLElement).style.background = rowHov; }}
+                          onMouseLeave={e => { if (!isMe) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+
+                          {/* User */}
+                          <td style={{ padding: '13px 18px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                                background: rc.grad ?? 'linear-gradient(135deg,#6366f1,#4f46e5)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 15, fontWeight: 900, color: '#fff',
+                                boxShadow: `0 0 12px ${rc.color}40` }}>
+                                {u.username[0].toUpperCase()}
+                              </div>
+                              <div>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: t1, margin: 0 }}>
+                                  {u.username}
+                                  {isMe && <span style={{ marginLeft: 7, fontSize: 10, color: '#818cf8', fontWeight: 700 }}>(вы)</span>}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Email */}
+                          <td style={{ padding: '13px 18px', fontSize: 13, color: t2 }}>{u.email}</td>
+
+                          {/* Date */}
+                          <td style={{ padding: '13px 18px', fontSize: 12, color: t3, whiteSpace: 'nowrap' }}>
+                            {u.created_at ? format(new Date(u.created_at), 'd MMM yyyy', { locale: ru }) : '—'}
+                          </td>
+
+                          {/* Active */}
+                          <td style={{ padding: '13px 18px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px',
+                              borderRadius: 8, fontSize: 11, fontWeight: 700,
+                              background: u.is_active ? 'rgba(34,197,94,0.12)'  : 'rgba(100,116,139,0.1)',
+                              color:      u.is_active ? '#22c55e'               : t3,
+                              border: `1px solid ${u.is_active ? 'rgba(34,197,94,0.3)' : 'rgba(100,116,139,0.2)'}` }}>
+                              {u.is_active ? <CheckCircle2 size={10}/> : <Ban size={10}/>}
+                              {u.is_active ? 'Активен' : 'Отключён'}
+                            </span>
+                          </td>
+
+                          {/* Role */}
+                          <td style={{ padding: '13px 18px' }}>
+                            {isMe
+                              ? <span style={{ fontSize: 11, color: t3, fontStyle: 'italic' }}>себя нельзя</span>
+                              : <RoleDropdown user={u} dark={dark} onChangeRole={(id, role) => changeRoleMut.mutate({ id, role })}/>
+                            }
+                          </td>
+
+                          {/* Actions */}
+                          <td style={{ padding: '13px 18px' }}>
+                            {!isMe && (
+                              <button
+                                onClick={() => toggleActiveMut.mutate({ id: u.id, is_active: !u.is_active })}
+                                title={u.is_active ? 'Отключить' : 'Активировать'}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  width: 32, height: 32, borderRadius: 9, cursor: 'pointer', transition: 'all 0.15s',
+                                  border: `1px solid ${u.is_active ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+                                  background: u.is_active ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)',
+                                  color: u.is_active ? '#f87171' : '#22c55e' }}>
+                                {u.is_active ? <X size={13}/> : <CheckCircle2 size={13}/>}
+                              </button>
+                            )}
+                          </td>
+                        </motion.tr>
+                      );
+                    })
+                }
+              </tbody>
+            </table>
+
+            {!isLoading && filtered.length === 0 && (
+              <div style={{ padding: '60px 0', textAlign: 'center' }}>
+                <Users size={40} style={{ margin: '0 auto 12px', color: t3, opacity: 0.4 }}/>
+                <p style={{ color: t3, fontSize: 14 }}>Пользователи не найдены</p>
+              </div>
+            )}
+          </div>
+
+          <div style={{ padding: '12px 20px', borderTop: `1px solid ${cardBord}`,
+            fontSize: 12, color: t3, textAlign: 'right' }}>
+            Показано {filtered.length} из {allUsers.length} пользователей
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
