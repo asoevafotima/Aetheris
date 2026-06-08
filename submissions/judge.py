@@ -1,17 +1,75 @@
 import os
 import sys
+import io
+import threading
 import subprocess
 import tempfile
 import time
 import uuid
 import shutil
-from datetime import datetime
+import traceback
 from pathlib import Path
+from datetime import datetime
 
-# Use a project-local directory for temp files to avoid Windows AppControl policy
-# that blocks executing scripts from the system %TEMP% folder.
-JUDGE_TMP = Path(__file__).parent.parent / "judge_tmp"
-JUDGE_TMP.mkdir(exist_ok=True)
+# Serializes in-process Python execution (it swaps global sys.stdin/stdout).
+_INPROC_LOCK = threading.Lock()
+
+
+def _get_python_exe() -> str:
+    """
+    Return a reliable python.exe path.
+
+    The server may run under a python whose subprocess-spawned children get
+    blocked by Windows Smart App Control / WDAC (WinError 4551), especially the
+    Microsoft-Store app-exec aliases in %LOCALAPPDATA%\\Microsoft\\WindowsApps.
+    A normal venv python.exe is a trusted, signed exe and is never blocked, so
+    we prefer it.
+    """
+    project_root = Path(__file__).parent.parent
+
+    candidates = [
+        project_root / ".venv" / "Scripts" / "python.exe",   # Windows venv
+        project_root / ".venv" / "bin" / "python",           # POSIX venv
+        project_root / "venv" / "Scripts" / "python.exe",
+        project_root / "venv" / "bin" / "python",
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c)
+
+    # Fall back to sys.executable unless it is a WindowsApps exec-alias
+    exe = sys.executable or ""
+    if exe and "WindowsApps" not in exe:
+        return exe
+
+    found = shutil.which("python") or shutil.which("python3")
+    return found or exe
+
+
+PYTHON_EXE = _get_python_exe()
+
+
+def _python_candidates() -> list:
+    """Ordered list of python interpreters to try, de-duplicated, skipping
+    WindowsApps exec-aliases (those tend to be blocked by Smart App Control)."""
+    out = []
+    for exe in (PYTHON_EXE, sys.executable):
+        if exe and "WindowsApps" not in exe and exe not in out:
+            out.append(exe)
+    return out
+
+
+def _utf8_env() -> dict:
+    """
+    Force child process to use UTF-8 for stdin/stdout so Cyrillic (and any
+    non-ASCII) output is decoded correctly. Without this, child Python on
+    Windows encodes stdout in the console codepage (cp1251) while we decode
+    as UTF-8 -> garbled text / UnicodeDecodeError.
+    """
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    return env
 
 
 def _normalize(s: str) -> str:
@@ -22,103 +80,189 @@ def _normalize(s: str) -> str:
     return '\n'.join(lines)
 
 
+def _run_python_inprocess(code: str, input_data: str, time_limit_s: float) -> dict:
+    """
+    Execute Python code INSIDE this process via exec(), with stdin/stdout
+    redirected. No child process is launched, so Windows Smart App Control
+    (WinError 4551) cannot block it. Runs in a worker thread to enforce the
+    time limit. Serialized by a lock because it swaps the global sys streams.
+    """
+    result = {"status": "system_error", "output": "", "error": "", "time_ms": 0}
+    buf_out = io.StringIO()
+    fake_in = io.StringIO(input_data)
+
+    def target():
+        try:
+            ns = {"__name__": "__main__"}
+            exec(compile(code, "<solution>", "exec"), ns)
+            result["status"] = "ok"
+            result["error"] = ""
+        except SystemExit:
+            result["status"] = "ok"
+            result["error"] = ""
+        except BaseException:
+            result["status"] = "runtime_error"
+            result["error"] = traceback.format_exc()[:2000]
+
+    # Swap the global streams in THIS thread and always restore them in finally,
+    # so a hung (timed-out) worker can never leave the server's stdout broken.
+    with _INPROC_LOCK:
+        old_in, old_out, old_err = sys.stdin, sys.stdout, sys.stderr
+        sys.stdin, sys.stdout, sys.stderr = fake_in, buf_out, io.StringIO()
+        try:
+            t = threading.Thread(target=target, daemon=True)
+            start = time.time()
+            t.start()
+            t.join(time_limit_s)
+            elapsed_ms = int((time.time() - start) * 1000)
+        finally:
+            sys.stdin, sys.stdout, sys.stderr = old_in, old_out, old_err
+
+    if t.is_alive():
+        return {"status": "time_limit", "output": "", "error": "", "time_ms": int(time_limit_s * 1000)}
+    result["output"] = buf_out.getvalue()
+    result["time_ms"] = elapsed_ms
+    return result
+
+
 def _run_python(code: str, input_data: str, time_limit_s: float) -> dict:
     """
-    Execute Python code by passing it via -c flag — no temp file needed,
-    which avoids Windows Application Control (WDAC/AppLocker) policy blocks.
+    Primary path: run the code as a real subprocess (isolated, with a hard
+    timeout). If every interpreter is blocked by Windows Smart App Control
+    (WinError 4551 raised as OSError), transparently fall back to in-process
+    execution so judging still works on locked-down machines.
     """
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False, encoding="utf-8") as f:
+        f.write(code)
+        tmp_path = f.name
     try:
-        start = time.time()
-        proc = subprocess.run(
-            [sys.executable, "-c", code],
-            input=input_data,
-            capture_output=True,
-            text=True,
-            timeout=time_limit_s,
-            encoding="utf-8",
-        )
-        elapsed_ms = int((time.time() - start) * 1000)
-        if proc.returncode != 0:
-            stderr = proc.stderr[:2000] if proc.stderr else ""
-            return {"status": "runtime_error", "output": "", "error": stderr, "time_ms": elapsed_ms}
-        return {"status": "ok", "output": proc.stdout, "error": "", "time_ms": elapsed_ms}
-    except subprocess.TimeoutExpired:
-        return {"status": "time_limit", "output": "", "error": "", "time_ms": int(time_limit_s * 1000)}
-    except PermissionError as e:
-        return {"status": "system_error", "output": "", "error": f"Permission denied: {e}", "time_ms": 0}
-    except Exception as e:
-        return {"status": "system_error", "output": "", "error": str(e)[:500], "time_ms": 0}
+        for exe in _python_candidates():
+            try:
+                start = time.time()
+                proc = subprocess.run(
+                    [exe, tmp_path],
+                    input=input_data,
+                    capture_output=True,
+                    text=True,
+                    timeout=time_limit_s,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=_utf8_env(),
+                )
+                elapsed_ms = int((time.time() - start) * 1000)
+                if proc.returncode != 0:
+                    return {"status": "runtime_error", "output": "", "error": (proc.stderr or "")[:2000], "time_ms": elapsed_ms}
+                return {"status": "ok", "output": proc.stdout or "", "error": "", "time_ms": elapsed_ms}
+            except subprocess.TimeoutExpired:
+                return {"status": "time_limit", "output": "", "error": "", "time_ms": int(time_limit_s * 1000)}
+            except OSError:
+                # WinError 4551 (App Control blocked the interpreter) — try next.
+                continue
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    # All subprocess attempts were blocked — run in-process (immune to App Control).
+    return _run_python_inprocess(code, input_data, time_limit_s)
 
 
 def _run_cpp(code: str, input_data: str, time_limit_s: float) -> dict:
     if not shutil.which("g++"):
-        return {
-            "status": "system_error",
-            "output": "",
-            "error": "g++ not found. Install MinGW/MSYS2 and add to PATH to compile C++.",
-            "time_ms": 0,
-        }
-    # Use project-local judge_tmp instead of system %TEMP% to bypass Windows AppControl
-    tmpdir = JUDGE_TMP / uuid.uuid4().hex
-    tmpdir.mkdir(exist_ok=True)
+        return {"status": "system_error", "output": "", "error": "g++ not found. Install MinGW to compile C++.", "time_ms": 0}
+    tmpdir = tempfile.mkdtemp()
     try:
-        src = tmpdir / "solution.cpp"
-        exe = tmpdir / "solution.exe"
-        src.write_text(code, encoding="utf-8")
-
+        src = os.path.join(tmpdir, "solution.cpp")
+        exe = os.path.join(tmpdir, "solution.exe")
+        with open(src, "w", encoding="utf-8") as f:
+            f.write(code)
         compile_proc = subprocess.run(
-            ["g++", "-O2", "-std=c++17", "-o", str(exe), str(src)],
+            ["g++", "-O2", "-std=c++17", "-o", exe, src],
             capture_output=True, text=True, timeout=30,
         )
         if compile_proc.returncode != 0:
             return {"status": "compile_error", "output": "", "error": compile_proc.stderr[:2000], "time_ms": 0}
-
         start = time.time()
         try:
             proc = subprocess.run(
-                [str(exe)],
+                [exe],
                 input=input_data,
                 capture_output=True,
                 text=True,
                 timeout=time_limit_s,
                 encoding="utf-8",
+                errors="replace",
             )
             elapsed_ms = int((time.time() - start) * 1000)
             if proc.returncode != 0:
-                return {"status": "runtime_error", "output": "", "error": proc.stderr[:2000], "time_ms": elapsed_ms}
-            return {"status": "ok", "output": proc.stdout, "error": "", "time_ms": elapsed_ms}
+                return {"status": "runtime_error", "output": "", "error": (proc.stderr or "")[:2000], "time_ms": elapsed_ms}
+            return {"status": "ok", "output": proc.stdout or "", "error": "", "time_ms": elapsed_ms}
         except subprocess.TimeoutExpired:
             return {"status": "time_limit", "output": "", "error": "", "time_ms": int(time_limit_s * 1000)}
-    except PermissionError as e:
-        return {"status": "system_error", "output": "", "error": f"Permission denied: {e}", "time_ms": 0}
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def _run_java(code: str, input_data: str, time_limit_s: float) -> dict:
-    if not shutil.which("javac"):
-        return {"status": "system_error", "output": "", "error": "javac not found.", "time_ms": 0}
-    tmpdir = JUDGE_TMP / uuid.uuid4().hex
-    tmpdir.mkdir(exist_ok=True)
+def _run_c(code: str, input_data: str, time_limit_s: float) -> dict:
+    if not shutil.which("gcc"):
+        return {"status": "system_error", "output": "", "error": "gcc not found. Install MinGW/MSYS2 to compile C.", "time_ms": 0}
+    tmpdir = tempfile.mkdtemp()
     try:
-        src = tmpdir / "Solution.java"
-        src.write_text(code, encoding="utf-8")
+        src = os.path.join(tmpdir, "solution.c")
+        exe = os.path.join(tmpdir, "solution.exe")
+        with open(src, "w", encoding="utf-8") as f:
+            f.write(code)
         compile_proc = subprocess.run(
-            ["javac", str(src)], capture_output=True, text=True, timeout=30,
+            ["gcc", "-O2", "-std=c11", "-o", exe, src],
+            capture_output=True, text=True, timeout=30,
         )
         if compile_proc.returncode != 0:
             return {"status": "compile_error", "output": "", "error": compile_proc.stderr[:2000], "time_ms": 0}
         start = time.time()
         try:
             proc = subprocess.run(
-                ["java", "-cp", str(tmpdir), "Solution"],
-                input=input_data, capture_output=True, text=True,
-                timeout=time_limit_s, encoding="utf-8",
+                [exe],
+                input=input_data,
+                capture_output=True,
+                text=True,
+                timeout=time_limit_s,
+                encoding="utf-8",
+                errors="replace",
             )
             elapsed_ms = int((time.time() - start) * 1000)
             if proc.returncode != 0:
-                return {"status": "runtime_error", "output": "", "error": proc.stderr[:2000], "time_ms": elapsed_ms}
-            return {"status": "ok", "output": proc.stdout, "error": "", "time_ms": elapsed_ms}
+                return {"status": "runtime_error", "output": "", "error": (proc.stderr or "")[:2000], "time_ms": elapsed_ms}
+            return {"status": "ok", "output": proc.stdout or "", "error": "", "time_ms": elapsed_ms}
+        except subprocess.TimeoutExpired:
+            return {"status": "time_limit", "output": "", "error": "", "time_ms": int(time_limit_s * 1000)}
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def _run_node(code: str, input_data: str, time_limit_s: float) -> dict:
+    if not shutil.which("node"):
+        return {"status": "system_error", "output": "", "error": "node not found. Install Node.js to run JavaScript.", "time_ms": 0}
+    tmpdir = tempfile.mkdtemp()
+    try:
+        src = os.path.join(tmpdir, "solution.js")
+        with open(src, "w", encoding="utf-8") as f:
+            f.write(code)
+        start = time.time()
+        try:
+            proc = subprocess.run(
+                ["node", src],
+                input=input_data,
+                capture_output=True,
+                text=True,
+                timeout=time_limit_s,
+                encoding="utf-8",
+                errors="replace",
+            )
+            elapsed_ms = int((time.time() - start) * 1000)
+            if proc.returncode != 0:
+                return {"status": "runtime_error", "output": "", "error": (proc.stderr or "")[:2000], "time_ms": elapsed_ms}
+            return {"status": "ok", "output": proc.stdout or "", "error": "", "time_ms": elapsed_ms}
         except subprocess.TimeoutExpired:
             return {"status": "time_limit", "output": "", "error": "", "time_ms": int(time_limit_s * 1000)}
     finally:
@@ -129,22 +273,25 @@ def _execute(language: str, code: str, input_data: str, time_limit_s: float) -> 
     lang = language.lower()
     if lang in ("python", "python3", "py"):
         return _run_python(code, input_data, time_limit_s)
-    elif lang in ("cpp", "c++", "c"):
+    elif lang in ("cpp", "c++"):
         return _run_cpp(code, input_data, time_limit_s)
-    elif lang in ("java",):
-        return _run_java(code, input_data, time_limit_s)
+    elif lang in ("c",):
+        return _run_c(code, input_data, time_limit_s)
+    elif lang in ("javascript", "js", "node", "nodejs"):
+        return _run_node(code, input_data, time_limit_s)
     else:
-        return {
-            "status": "system_error",
-            "output": "",
-            "error": f"Language '{language}' is not supported. Supported: python, cpp, java.",
-            "time_ms": 0,
-        }
+        return {"status": "system_error", "output": "", "error": f"Language '{language}' is not supported yet. Supported: python, cpp, c, javascript.", "time_ms": 0}
 
 
 def _ai_analyze_error(
-    code: str, language: str, problem_title: str, problem_desc: str,
-    status: str, error_message: str, passed_count: int, total_count: int,
+    code: str,
+    language: str,
+    problem_title: str,
+    problem_desc: str,
+    status: str,
+    error_message: str,
+    passed_count: int,
+    total_count: int,
 ) -> str | None:
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
@@ -154,28 +301,28 @@ def _ai_analyze_error(
         client = Groq(api_key=api_key)
 
         status_ru = {
-            "wrong_answer":  "Неправильный ответ",
-            "time_limit":    "Превышение лимита времени",
+            "wrong_answer": "Неправильный ответ",
+            "time_limit": "Превышение лимита времени",
             "runtime_error": "Ошибка выполнения",
             "compile_error": "Ошибка компиляции",
-            "system_error":  "Системная ошибка",
+            "system_error": "Системная ошибка",
         }.get(status, status)
 
         prompt = (
             f"Задача: {problem_title}\n"
-            f"Описание: {problem_desc[:500]}\n\n"
+            f"Описание задачи: {problem_desc[:500]}\n\n"
             f"Язык: {language}\n\n"
-            f"Код:\n```{language}\n{code[:3000]}\n```\n\n"
-            f"Результат: {status_ru}\n"
+            f"Код ученика:\n```{language}\n{code[:3000]}\n```\n\n"
+            f"Результат проверки: {status_ru}\n"
             f"Пройдено тестов: {passed_count} из {total_count}\n"
         )
         if error_message:
-            prompt += f"Ошибка:\n{error_message[:1000]}\n\n"
+            prompt += f"Текст ошибки:\n{error_message[:1000]}\n\n"
         prompt += (
-            "Объясни что не так и как исправить. "
-            "Если Неправильный ответ — найди логическую ошибку. "
+            "Объясни что не так в коде и как это исправить. "
+            "Будь конкретным и понятным. Если это Неправильный ответ — найди логическую ошибку. "
             "Если ошибка выполнения — что вызывает сбой. "
-            "Если ошибка компиляции — объясни и покажи как исправить."
+            "Если ошибка компиляции — объясни синтаксическую ошибку и как её исправить."
         )
 
         response = client.chat.completions.create(
@@ -186,7 +333,8 @@ def _ai_analyze_error(
                     "content": (
                         "Ты помощник по спортивному программированию. "
                         "Объясняй ошибки просто и понятно ТОЛЬКО словами. "
-                        "КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать, показывать или предлагать любой код. "
+                        "КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО писать, показывать или предлагать любой код — "
+                        "ни исправленный, ни примерный, ни фрагменты. "
                         "ОБЯЗАТЕЛЬНО отвечай ТОЛЬКО на русском языке."
                     ),
                 },
@@ -230,9 +378,9 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
             return
 
         time_limit_s = (problem.time_limit_ms or 2000) / 1000.0
-        max_score    = sum(tc.score for tc in test_cases) or 1
-        total_score  = 0
-        max_time_ms  = 0
+        max_score = sum(tc.score for tc in test_cases) or 1
+        total_score = 0
+        max_time_ms = 0
         final_status = SubmissionStatus.accepted
         first_error: str | None = None
         passed_count = 0
@@ -243,7 +391,8 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
             res = _execute(sub.language, sub.code, tc.input_data or "", time_limit_s)
             elapsed_ms = res.get("time_ms", 0)
             max_time_ms = max(max_time_ms, elapsed_ms)
-            raw_status  = res["status"]
+
+            raw_status = res["status"]
 
             if raw_status == "compile_error":
                 update_submission_status(db, submission_id, SubmissionStatus.compile_error,
@@ -259,7 +408,7 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
 
             if raw_status == "ok":
                 expected = _normalize(tc.expected_output or "")
-                actual   = _normalize(res["output"])
+                actual = _normalize(res["output"])
                 if actual == expected:
                     tc_status = ResultStatus.accepted
                     total_score += tc.score
@@ -268,17 +417,17 @@ def judge_submission(submission_id: uuid.UUID, SessionLocal):
                     tc_status = ResultStatus.wrong_answer
                     if final_status == SubmissionStatus.accepted:
                         final_status = SubmissionStatus.wrong_answer
-                        first_error  = f"Неправильный ответ на тесте #{tc.order_num + 1}"
+                        first_error = f"Неправильный ответ на тесте #{tc.order_num + 1}"
             elif raw_status == "time_limit":
                 tc_status = ResultStatus.time_limit
                 if final_status == SubmissionStatus.accepted:
                     final_status = SubmissionStatus.time_limit
-                    first_error  = f"Превышен лимит времени на тесте #{tc.order_num + 1}"
+                    first_error = f"Превышен лимит времени на тесте #{tc.order_num + 1}"
             else:
                 tc_status = ResultStatus.runtime_error
                 if final_status == SubmissionStatus.accepted:
                     final_status = SubmissionStatus.runtime_error
-                    first_error  = res.get("error", "Runtime error")[:500]
+                    first_error = res.get("error", "Runtime error")[:500]
 
             create_result(
                 db, submission_id, tc.id, tc_status,
@@ -379,8 +528,9 @@ def _update_contest_standings(db, sub):
             Submission.status.in_(finished_statuses),
         ).order_by(Submission.created_at).all()
 
-        solved      = {}
+        solved = {}
         wrong_count = {}
+
         for s in all_subs:
             pid = str(s.problem_id)
             if pid in solved:
@@ -390,13 +540,13 @@ def _update_contest_standings(db, sub):
             else:
                 wrong_count[pid] = wrong_count.get(pid, 0) + 1
 
-        score   = len(solved)
+        score = len(solved)
         penalty = 0
         for pid, acc_sub in solved.items():
-            sub_time   = acc_sub.created_at.replace(tzinfo=None) if acc_sub.created_at else datetime.utcnow()
+            sub_time = acc_sub.created_at.replace(tzinfo=None) if acc_sub.created_at else datetime.utcnow()
             start_time = contest.starts_at.replace(tzinfo=None) if contest.starts_at else sub_time
-            delta_min  = int((sub_time - start_time).total_seconds() / 60)
-            penalty   += max(0, delta_min) + 20 * wrong_count.get(pid, 0)
+            delta_min = int((sub_time - start_time).total_seconds() / 60)
+            penalty += max(0, delta_min) + 20 * wrong_count.get(pid, 0)
 
         upsert_standing(db, sub.contest_id, sub.user_id, score, penalty)
         update_ranks(db, sub.contest_id)

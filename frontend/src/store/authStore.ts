@@ -53,7 +53,8 @@ export const useAuthStore = create<AuthState>()(
           set({ user, isAuthenticated: true });
         } catch (error: unknown) {
           const status = (error as { response?: { status?: number } })?.response?.status;
-          if (status === 401 || status === 403) {
+          if (status === 401 || status === 403 || status === 404) {
+            // Невалидный/просроченный токен или удалённый пользователь — чистим сессию
             set({ isAuthenticated: false, user: null });
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');

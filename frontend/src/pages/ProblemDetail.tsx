@@ -6,7 +6,7 @@ import Editor from '@monaco-editor/react';
 import {
   Play, Clock, Database, BarChart2, Bot,
   ChevronDown, ChevronUp, CheckCircle, XCircle,
-  Loader2, Lightbulb, RefreshCw, ShieldOff, ArrowLeft, Code2,
+  Loader2, Lightbulb, RefreshCw, ShieldOff, ArrowLeft, Code2, Check,
 } from 'lucide-react';
 import { problemsApi, submissionsApi, aiApi, testCasesApi } from '../api/endpoints';
 import { BackgroundGraph } from '../components/BackgroundGraph';
@@ -16,13 +16,87 @@ import { useThemeStore } from '../store/themeStore';
 import type { Submission } from '../types';
 
 const LANGUAGES = [
-  { value: 'python', label: 'Python 3' },
-  { value: 'cpp',    label: 'C++ 17'   },
+  { value: 'python',     label: 'Python 3',   badge: 'Py',  color: '#3b82f6' },
+  { value: 'cpp',        label: 'C++ 17',     badge: 'C++', color: '#f472b6' },
+  { value: 'c',          label: 'C',          badge: 'C',   color: '#22d3ee' },
+  { value: 'javascript', label: 'JavaScript', badge: 'JS',  color: '#eab308' },
 ];
 const STARTERS: Record<string, string> = {
   python: `import sys\ninput = sys.stdin.readline\n\ndef solve():\n    pass\n\nsolve()\n`,
   cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n\n    return 0;\n}\n`,
+  c: `#include <stdio.h>\n\nint main() {\n    \n    return 0;\n}\n`,
+  javascript: `const data = require('fs').readFileSync(0, 'utf8').split('\\n');\nlet idx = 0;\nconst next = () => data[idx++];\n\n\n`,
 };
+// Monaco editor syntax-highlight language id per submission language
+const MONACO_LANG: Record<string, string> = {
+  python: 'python',
+  cpp: 'cpp',
+  c: 'c',
+  javascript: 'javascript',
+};
+
+// ── Custom themed language selector (native <select> options ignore dark theme) ──
+function LangDropdown({ lang, setLang, dark }: { lang: string; setLang: (v: string) => void; dark: boolean }) {
+  const [open, setOpen] = useState(false);
+  const cur = LANGUAGES.find(l => l.value === lang) ?? LANGUAGES[0];
+
+  const boxBg    = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const boxBord  = dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+  const dropBg   = dark ? 'rgba(10,16,32,0.99)'    : 'rgba(255,255,255,0.99)';
+  const dropBord = dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)';
+  const hoverBg  = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const t1       = dark ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.85)';
+  const t2       = dark ? 'rgba(255,255,255,0.5)'  : 'rgba(0,0,0,0.5)';
+
+  const Badge = ({ text, color }: { text: string; color: string }) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      minWidth: 26, height: 18, padding: '0 5px', borderRadius: 5, fontSize: 10, fontWeight: 800,
+      background: `${color}22`, color, border: `1px solid ${color}55`, flexShrink: 0 }}>{text}</span>
+  );
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(v => !v)}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 11px', minWidth: 148,
+          background: boxBg, border: `1px solid ${open ? cur.color + '88' : boxBord}`, borderRadius: 9,
+          color: t1, fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none', transition: 'border-color 0.15s' }}>
+        <Badge text={cur.badge} color={cur.color} />
+        <span style={{ flex: 1, textAlign: 'left' }}>{cur.label}</span>
+        <ChevronDown size={13} style={{ color: t2, transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'none' }} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setOpen(false)} />
+            <motion.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.12 }}
+              style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, minWidth: 180,
+                background: dropBg, border: `1px solid ${dropBord}`, borderRadius: 12, overflow: 'hidden',
+                boxShadow: '0 12px 36px rgba(0,0,0,0.35)', backdropFilter: 'blur(24px)' }}>
+              {LANGUAGES.map(l => {
+                const active = l.value === lang;
+                return (
+                  <button key={l.value} onClick={() => { setLang(l.value); setOpen(false); }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px',
+                      background: active ? `${l.color}18` : 'transparent', border: 'none', cursor: 'pointer',
+                      color: active ? l.color : t1, fontSize: 13, fontWeight: active ? 700 : 500,
+                      textAlign: 'left', transition: 'background 0.12s' }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = hoverBg; }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                    <Badge text={l.badge} color={l.color} />
+                    <span style={{ flex: 1 }}>{l.label}</span>
+                    {active && <Check size={14} style={{ color: l.color }} />}
+                  </button>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 const HINT_TYPES = [
   { value: 'algorithm',  label: '🧠 Алгоритм'  },
   { value: 'approach',   label: '📋 Подход'     },
@@ -332,17 +406,11 @@ export function ProblemDetail() {
         style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}
       >
         {/* Тулбар — такой же как в AIMentor */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', borderBottom: `1px solid ${panelBord}`, background: panelBg, backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)', flexShrink: 0 }}>
+        <div style={{ position: 'relative', zIndex: 30, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', borderBottom: `1px solid ${panelBord}`, background: panelBg, backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)', flexShrink: 0 }}>
           {/* Shimmer top */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: dark ? 'linear-gradient(90deg,transparent,rgba(34,197,94,0.3),transparent)' : 'linear-gradient(90deg,transparent,rgba(34,197,94,0.2),transparent)' }} />
 
-          <div style={{ position: 'relative' }}>
-            <select value={lang} onChange={e => setLang(e.target.value)}
-              style={{ padding: '7px 28px 7px 12px', background: inputBg, border: `1px solid ${inputBord}`, borderRadius: 9, color: t1, fontSize: 13, cursor: 'pointer', outline: 'none', fontFamily: 'inherit', appearance: 'none', WebkitAppearance: 'none' }}>
-              {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-            </select>
-            <ChevronDown size={12} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: t3, pointerEvents: 'none' }} />
-          </div>
+          <LangDropdown lang={lang} setLang={setLang} dark={dark} />
 
           <div style={{ flex: 1 }} />
 
@@ -367,7 +435,7 @@ export function ProblemDetail() {
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <Editor
             height="100%"
-            language={lang === 'cpp' ? 'cpp' : 'python'}
+            language={MONACO_LANG[lang] ?? 'python'}
             value={code}
             onChange={v => setCode(v ?? '')}
             theme={dark ? 'vs-dark' : 'vs'}

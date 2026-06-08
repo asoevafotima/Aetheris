@@ -29,7 +29,6 @@ def _run_migrations():
             if col not in duel_cols:
                 conn.execute(text(sql))
 
-        # problems — difficulty_code, topic, status columns
         prob_cols = {c['name'] for c in insp.get_columns('problems')}
         if 'difficulty_code' not in prob_cols:
             conn.execute(text("ALTER TABLE problems ADD COLUMN difficulty_code VARCHAR(10)"))
@@ -140,7 +139,3 @@ app.include_router(follows_router)
 app.include_router(audit_logs_router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/")
-def root():
-    return {"message": "CodeArena API is running"}

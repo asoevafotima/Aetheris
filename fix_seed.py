@@ -89,7 +89,6 @@ for cid, ctitle in contests:
             added += 1
     print(f"  OK  '{ctitle[:35]}' — {added} problems added (A-{labels[added-1]})")
 
-# --- summary ---
 print("\n" + "=" * 50)
 print("ALL DONE!")
 print()
