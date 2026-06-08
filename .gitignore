@@ -6,3 +6,17 @@ CLAUDE.md
 .env
 *.pyc
 *.pyo
+
+# Node / frontend build
+node_modules
+frontend/dist
+dist
+
+# Judge temp files & uploaded avatars
+judge_tmp/
+static/avatars/
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
