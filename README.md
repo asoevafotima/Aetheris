@@ -11,7 +11,6 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-green)
 
 </div>
 
@@ -100,8 +99,6 @@
 5. Выносится вердикт: `accepted` / `wrong_answer` / `time_limit` / `runtime_error` / `compile_error`
 6. Результат обновляет таблицу контеста, статус дуэли и прогресс тренировки
 
-> На Windows при блокировке запуска Smart App Control (`WinError 4551`) судья автоматически переключается на исполнение Python-кода внутри процесса через `exec()`.
-
 ---
 
 ## 🚀 Запуск
@@ -160,55 +157,12 @@ GROQ_API_KEY=...
 
 ---
 
-## 🗄️ База данных
-
-Схема создаётся автоматически при старте (`Base.metadata.create_all`). Дополнительно в `main.py` есть идемпотентные миграции для дозаливки новых колонок.
-
-Полноценные миграции — через **Alembic** (папка `alebmic/`, спеллинг нестандартный):
-
-```bash
-alembic revision --autogenerate -m "описание"
-alembic upgrade head
-```
-
----
-
 ## 🔐 Авторизация
 
 - **JWT access-токен** — срок жизни 60 минут
 - **Refresh-токен** — 30 дней, хранится в БД, можно отозвать
 - **Роли:** `user`, `moderator`, `admin`
-- Защита эндпоинтов через зависимости `get_current_user` и `require_role([...])`
 - Вход по email/паролю или через **Google OAuth**
-
----
-
-## 📂 Структура проекта
-
-```
-aetheris/
-├── main.py                  # точка входа, регистрация роутеров
-├── database.py              # подключение к БД
-├── websocket_manager.py     # менеджер WebSocket-соединений
-├── auth/                    # авторизация (JWT, OAuth)
-├── users/                   # пользователи и роли
-├── problems/                # задачи
-├── submissions/             # посылки + судья (judge.py)
-├── contests/                # контесты + WebSocket
-├── duels/                   # дуэли 1 на 1
-├── teams/                   # команды
-├── ratings/                 # рейтинг и лидерборд
-├── ai_hints/ ai_analysis/   # AI-наставник
-├── training_plans/          # тренировки
-├── ... (ещё ~30 модулей)
-└── frontend/                # React + TypeScript SPA
-    └── src/
-        ├── pages/           # страницы
-        ├── components/      # компоненты
-        ├── store/           # Zustand-сторы
-        ├── api/             # клиент API
-        └── i18n/            # переводы (20 языков)
-```
 
 ---
 
@@ -220,12 +174,6 @@ aetheris/
 | C++ 17 | `g++ -O2 -std=c++17` |
 | C | `gcc -O2 -std=c11` |
 | JavaScript | `node` |
-
----
-
-## 📜 Лицензия
-
-Проект распространяется под лицензией **MIT**.
 
 ---
 
